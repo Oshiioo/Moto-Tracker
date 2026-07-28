@@ -798,11 +798,13 @@ const submitStyle = {
 function AiCaptureBar({ apiKey, onExtract, promptText, disabled }) {
   const [status, setStatus] = useState("idle"); // idle | busy | error
   const [error, setError] = useState("");
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceText, setVoiceText] = useState("");
   const fileRef = useRef(null);
 
   const runExtraction = async (payload) => {
     if (!apiKey) {
-      setError("Ajoute ta clé API Gemini dans Réglages pour activer ceci");
+      setError("Clé API Gemini manquante (voir Réglages)");
       setStatus("error");
       return;
     }
@@ -812,6 +814,8 @@ function AiCaptureBar({ apiKey, onExtract, promptText, disabled }) {
       const result = await geminiExtract(apiKey, payload);
       onExtract(result);
       setStatus("idle");
+      setVoiceOpen(false);
+      setVoiceText("");
     } catch (e) {
       setError(e.message || "Échec de l'analyse, réessaie");
       setStatus("error");
@@ -826,25 +830,9 @@ function AiCaptureBar({ apiKey, onExtract, promptText, disabled }) {
     runExtraction({ promptText, imageBase64: base64, imageMimeType: file.type });
   };
 
-  const onVoice = () => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      setError("Dictée vocale non supportée par ce navigateur");
-      setStatus("error");
-      return;
-    }
-    const rec = new SR();
-    rec.lang = "fr-FR";
-    rec.onstart = () => setStatus("busy");
-    rec.onerror = () => {
-      setError("Je n'ai pas entendu, réessaie");
-      setStatus("error");
-    };
-    rec.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      runExtraction({ promptText: `${promptText}\n\nTranscription vocale : "${transcript}"` });
-    };
-    rec.start();
+  const onValidateVoice = () => {
+    if (!voiceText.trim()) return;
+    runExtraction({ promptText: `${promptText}\n\nTranscription vocale : "${voiceText.trim()}"` });
   };
 
   return (
@@ -861,7 +849,7 @@ function AiCaptureBar({ apiKey, onExtract, promptText, disabled }) {
         <button
           type="button"
           disabled={disabled || status === "busy"}
-          onClick={onVoice}
+          onClick={() => setVoiceOpen((v) => !v)}
           style={{ ...aiButtonStyle, opacity: status === "busy" ? 0.6 : 1 }}
         >
           <Mic size={14} /> Dicter
@@ -872,6 +860,27 @@ function AiCaptureBar({ apiKey, onExtract, promptText, disabled }) {
           </span>
         )}
       </div>
+
+      {voiceOpen && (
+        <div className="mt-2">
+          <textarea
+            style={{ ...inputStyle, minHeight: 70, resize: "vertical" }}
+            placeholder="Appuie sur le micro de ton clavier pour dicter, ex. « plein de 12 litres et demi, 22 euros, 69 100 kilomètres »"
+            value={voiceText}
+            onChange={(e) => setVoiceText(e.target.value)}
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={onValidateVoice}
+            disabled={status === "busy" || !voiceText.trim()}
+            style={{ ...submitStyle, marginTop: 6, opacity: !voiceText.trim() ? 0.5 : 1 }}
+          >
+            Analyser
+          </button>
+        </div>
+      )}
+
       {status === "error" && (
         <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.danger }} className="mt-2">
           {error}
