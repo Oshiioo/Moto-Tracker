@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Fuel, Wrench, Gauge, Settings, Plus, Trash2, X, AlertTriangle, CheckCircle2, Clock, Camera, Mic, Loader2 } from "lucide-react";
 
 const STORAGE_KEY = "moto-tracker-data";
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-3.6-flash";
 // Clé lue depuis le fichier .env.local (voir instructions), jamais depuis l'interface
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
@@ -22,7 +22,13 @@ async function geminiExtract(apiKey, { promptText, imageBase64, imageMimeType })
   );
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Erreur Gemini (${res.status}) — vérifie ta clé API`);
+    const messages = {
+      404: "Modèle Gemini introuvable (config à mettre à jour)",
+      401: "Clé API invalide",
+      403: "Clé API refusée (vérifie les restrictions dans AI Studio)",
+      429: "Quota Gemini atteint pour aujourd'hui",
+    };
+    throw new Error(messages[res.status] || `Erreur Gemini (${res.status})`);
   }
   const data = await res.json();
   const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
