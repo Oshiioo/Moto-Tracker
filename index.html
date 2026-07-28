@@ -1,23 +1,55 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moto Tracker</title>
-    <!-- Tailwind CSS pour le style -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & React DOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel Standalone pour compiler le JSX directement dans le navigateur -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Lucide Icons (si ton app utilise des icônes) -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen">
-    <div id="root"></div>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moto Tracker - Honda CB500F</title>
 
-    <!-- Chargement et compilation à la volée de ton composant JSX -->
-    <script type="text/babel" src="./App.jsx"></script>
+  <!-- Tailwind CSS pour la mise en page -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- 1. Polyfill pour remplacer l'API window.storage par le localStorage standard du navigateur -->
+  <script>
+    if (!window.storage) {
+      window.storage = {
+        async get(key) {
+          const val = localStorage.getItem(key);
+          return val ? { value: val } : null;
+        },
+        async set(key, value) {
+          localStorage.setItem(key, value);
+        }
+      };
+    }
+  </script>
+
+  <!-- 2. Import Maps pour permettre les imports 'react' et 'lucide-react' directement dans le navigateur -->
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react"
+      }
+    }
+  </script>
+
+  <!-- Babel Standalone pour transpiler le JSX à la volée -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-[#1B1A17] text-[#F1ECE2] min-h-screen">
+
+  <!-- Point d'ancrage de l'application -->
+  <div id="root"></div>
+
+  <!-- Chargement et affichage du composant React -->
+  <script type="text/babel" data-type="module">
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import MotoTracker from './App.jsx';
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<MotoTracker />);
+  </script>
 </body>
 </html>
