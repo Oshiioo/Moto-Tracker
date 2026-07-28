@@ -1,0 +1,861 @@
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Fuel, Wrench, Gauge, Settings, Plus, Trash2, X, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+
+const STORAGE_KEY = "moto-tracker-data";
+
+// Préconisations constructeur Honda CB500F 2016, alignées sur les libellés
+// utilisés dans l'historique importé depuis LibertyRider
+const DEFAULT_RULES = [
+  { id: "r1", name: "Vidange", intervalKm: 12000, alignToGrid: true },
+  { id: "r2", name: "Filtre à air", intervalKm: 18000, alignToGrid: true },
+  { id: "r3", name: "Bougies", intervalKm: 24000, alignToGrid: true },
+  { id: "r4", name: "Graissage de la chaîne", intervalKm: 1000 },
+  { id: "r5", name: "Tension de la chaîne", intervalKm: 1000 },
+  { id: "r6", name: "Contrôle plaquettes et disques", intervalMonths: 12 },
+  { id: "r7", name: "Purge des liquides de frein", intervalMonths: 24 },
+  { id: "r8", name: "Liquide de refroidissement", intervalMonths: 36 },
+  { id: "r9", name: "Entretien annuel", intervalMonths: 12 },
+];
+
+// Historique importé depuis LibertyRider (51 231 km → 68 453 km)
+const IMPORTED_MAINTENANCE = [
+  { date: "2025-02-14", km: 51231, type: "Pression des pneus" },
+  { date: "2025-02-14", km: 51231, type: "Contrôle plaquettes et disques" },
+  { date: "2025-02-14", km: 51231, type: "Usure pneu avant" },
+  { date: "2025-02-14", km: 51231, type: "Entretien annuel" },
+  { date: "2025-02-14", km: 51231, type: "Graissage de la chaîne" },
+  { date: "2025-02-14", km: 51231, type: "Usure pneu arrière" },
+  { date: "2025-02-14", km: 51231, type: "Tension de la chaîne" },
+  { date: "2025-02-24", km: 51794, type: "Tension de la chaîne" },
+  { date: "2025-02-24", km: 51794, type: "Pression des pneus" },
+  { date: "2025-02-24", km: 51794, type: "Graissage de la chaîne" },
+  { date: "2025-03-04", km: 52318, type: "Graissage de la chaîne" },
+  { date: "2025-03-04", km: 52318, type: "Pression des pneus" },
+  { date: "2025-03-07", km: 52712, type: "Usure pneu arrière" },
+  { date: "2025-03-07", km: 52730, type: "Pression des pneus" },
+  { date: "2025-03-20", km: 53223, type: "Tension de la chaîne" },
+  { date: "2025-03-20", km: 53223, type: "Usure pneu arrière" },
+  { date: "2025-03-20", km: 53223, type: "Graissage de la chaîne" },
+  { date: "2025-03-20", km: 53223, type: "Pression des pneus" },
+  { date: "2025-03-31", km: 53949, type: "Pression des pneus" },
+  { date: "2025-04-03", km: 54054, type: "Graissage de la chaîne" },
+  { date: "2025-04-21", km: 54541, type: "Usure pneu arrière" },
+  { date: "2025-04-26", km: 54943, type: "Pression des pneus" },
+  { date: "2025-04-26", km: 54943, type: "Graissage de la chaîne" },
+  { date: "2025-05-02", km: 55231, type: "Tension de la chaîne" },
+  { date: "2025-05-10", km: 55553, type: "Pression des pneus" },
+  { date: "2025-05-10", km: 55553, type: "Usure pneu arrière" },
+  { date: "2025-05-18", km: 55975, type: "Pression des pneus" },
+  { date: "2025-05-18", km: 55975, type: "Graissage de la chaîne" },
+  { date: "2025-05-24", km: 56223, type: "Usure pneu arrière" },
+  { date: "2025-05-24", km: 56223, type: "Usure pneu avant" },
+  { date: "2025-08-01", km: 57249, type: "Graissage de la chaîne" },
+  { date: "2025-08-01", km: 57249, type: "Usure pneu arrière" },
+  { date: "2025-08-01", km: 57249, type: "Pression des pneus" },
+  { date: "2025-08-01", km: 57249, type: "Tension de la chaîne" },
+  { date: "2025-08-04", km: 57568, type: "Pression des pneus" },
+  { date: "2025-08-13", km: 58178, type: "Pression des pneus" },
+  { date: "2025-08-13", km: 58178, type: "Graissage de la chaîne" },
+  { date: "2025-08-16", km: 58267, type: "Usure pneu arrière" },
+  { date: "2025-08-30", km: 58646, type: "Pression des pneus" },
+  { date: "2025-09-05", km: 59246, type: "Pression des pneus" },
+  { date: "2025-09-05", km: 59246, type: "Graissage de la chaîne" },
+  { date: "2025-09-06", km: 59686, type: "Pression des pneus" },
+  { date: "2025-09-06", km: 59686, type: "Graissage de la chaîne" },
+  { date: "2025-09-16", km: 60001, type: "Tension de la chaîne" },
+  { date: "2025-09-18", km: 60008, type: "Usure pneu arrière" },
+  { date: "2025-09-30", km: 60310, type: "Pression des pneus" },
+  { date: "2025-10-10", km: 60852, type: "Graissage de la chaîne" },
+  { date: "2025-10-10", km: 60852, type: "Pression des pneus" },
+  { date: "2025-10-24", km: 61090, type: "Usure pneu arrière" },
+  { date: "2025-10-24", km: 61090, type: "Contrôle plaquettes et disques" },
+  { date: "2025-10-24", km: 61090, type: "Purge des liquides de frein" },
+  { date: "2025-10-24", km: 61090, type: "Vidange", note: "Filtre à huile changé" },
+  { date: "2025-10-24", km: 61090, type: "Filtre à air" },
+  { date: "2025-10-24", km: 61090, type: "Bougies" },
+  { date: "2025-10-24", km: 61090, type: "Entretien annuel" },
+  { date: "2025-12-14", km: 61551, type: "Pression des pneus" },
+  { date: "2026-02-22", km: 62123, type: "Tension de la chaîne" },
+  { date: "2026-02-22", km: 62123, type: "Usure pneu arrière" },
+  { date: "2026-02-22", km: 62123, type: "Pression des pneus" },
+  { date: "2026-02-22", km: 62123, type: "Graissage de la chaîne" },
+  { date: "2026-03-26", km: 62806, type: "Pression des pneus" },
+  { date: "2026-03-26", km: 62806, type: "Graissage de la chaîne" },
+  { date: "2026-03-30", km: 63176, type: "Usure pneu arrière" },
+  { date: "2026-04-13", km: 63680, type: "Graissage de la chaîne" },
+  { date: "2026-04-13", km: 63680, type: "Pression des pneus" },
+  { date: "2026-04-17", km: 64169, type: "Tension de la chaîne" },
+  { date: "2026-04-17", km: 64265, type: "Usure pneu avant" },
+  { date: "2026-04-17", km: 64265, type: "Pression des pneus" },
+  { date: "2026-04-17", km: 64265, type: "Usure pneu arrière" },
+  { date: "2026-05-31", km: 66169, type: "Pression des pneus" },
+  { date: "2026-05-31", km: 66169, type: "Graissage de la chaîne" },
+  { date: "2026-05-31", km: 66169, type: "Tension de la chaîne" },
+  { date: "2026-05-31", km: 66169, type: "Usure pneu arrière" },
+  { date: "2026-07-08", km: 67934, type: "Pression des pneus" },
+  { date: "2026-07-08", km: 67934, type: "Usure pneu arrière" },
+  { date: "2026-07-23", km: 68453, type: "Pression des pneus" },
+  { date: "2026-07-23", km: 68453, type: "Tension de la chaîne" },
+].map((m, i) => ({ id: `import-${i}`, ...m }));
+
+const DEFAULT_DATA = {
+  vehicle: { name: "CB500F 2016", currentKm: 68984 },
+  fuel: [{ id: "fuel-1", date: "2026-07-28", km: 68842 }],
+  maintenance: IMPORTED_MAINTENANCE,
+  rules: DEFAULT_RULES,
+};
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+const fmtKm = (n) => new Intl.NumberFormat("fr-FR").format(Math.round(n));
+const fmtDate = (d) =>
+  new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+
+function loadData() {
+  return DEFAULT_DATA;
+}
+
+export default function MotoTracker() {
+  const [data, setData] = useState(null);
+  const [tab, setTab] = useState("dashboard");
+  const [ready, setReady] = useState(false);
+  const [showFuelForm, setShowFuelForm] = useState(false);
+  const [showMaintForm, setShowMaintForm] = useState(false);
+  const [showRuleForm, setShowRuleForm] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await window.storage.get(STORAGE_KEY);
+        setData(res && res.value ? JSON.parse(res.value) : DEFAULT_DATA);
+      } catch (e) {
+        setData(DEFAULT_DATA);
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, []);
+
+  const persist = useCallback(async (next) => {
+    setData(next);
+    try {
+      await window.storage.set(STORAGE_KEY, JSON.stringify(next));
+    } catch (e) {
+      console.error("Erreur de sauvegarde", e);
+    }
+  }, []);
+
+  const updateVehicle = (patch) => persist({ ...data, vehicle: { ...data.vehicle, ...patch } });
+
+  const addFuel = (entry) => {
+    const km = Number(entry.km);
+    const next = {
+      ...data,
+      fuel: [...data.fuel, { id: uid(), ...entry, km }].sort((a, b) => a.km - b.km),
+      vehicle: { ...data.vehicle, currentKm: Math.max(data.vehicle.currentKm, km) },
+    };
+    persist(next);
+    setShowFuelForm(false);
+  };
+
+  const addMaintenance = (entry) => {
+    const km = Number(entry.km);
+    const next = {
+      ...data,
+      maintenance: [...data.maintenance, { id: uid(), ...entry, km }].sort((a, b) => b.km - a.km),
+      vehicle: { ...data.vehicle, currentKm: Math.max(data.vehicle.currentKm, km) },
+    };
+    persist(next);
+    setShowMaintForm(false);
+  };
+
+  const addRule = (rule) => {
+    persist({ ...data, rules: [...data.rules, { id: uid(), ...rule }] });
+    setShowRuleForm(false);
+  };
+
+  const deleteItem = (list, id) => persist({ ...data, [list]: data[list].filter((i) => i.id !== id) });
+
+  const consumption = useMemo(() => {
+    if (!data) return [];
+    const sorted = [...data.fuel].sort((a, b) => a.km - b.km);
+    const out = [];
+    for (let i = 1; i < sorted.length; i++) {
+      const dist = sorted[i].km - sorted[i - 1].km;
+      if (dist > 0 && sorted[i].liters) {
+        out.push({
+          id: sorted[i].id,
+          date: sorted[i].date,
+          km: sorted[i].km,
+          value: (sorted[i].liters / dist) * 100,
+        });
+      }
+    }
+    return out;
+  }, [data]);
+
+  const avgConsumption = useMemo(() => {
+    if (consumption.length === 0) return null;
+    const recent = consumption.slice(-5);
+    return recent.reduce((s, c) => s + c.value, 0) / recent.length;
+  }, [consumption]);
+
+  const maintStatus = useMemo(() => {
+    if (!data) return [];
+    const currentKm = data.vehicle.currentKm;
+    const now = new Date();
+    return data.rules.map((rule) => {
+      const done = data.maintenance
+        .filter((m) => m.type === rule.name)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      const last = done[0] || null;
+      const lastKm = last?.km ?? null;
+      const lastDate = last?.date ?? null;
+
+      let nextDueKm = null;
+      let remainingKm = null;
+      let kmStatus = null;
+      if (rule.intervalKm) {
+        if (rule.alignToGrid) {
+          // Aligné sur la grille officielle constructeur (multiples fixes de l'intervalle),
+          // indépendamment du kilométrage réel de la dernière intervention
+          nextDueKm = Math.ceil(currentKm / rule.intervalKm) * rule.intervalKm;
+          if (nextDueKm === 0) nextDueKm = rule.intervalKm;
+        } else {
+          nextDueKm = (lastKm ?? 0) + rule.intervalKm;
+        }
+        remainingKm = nextDueKm - currentKm;
+        kmStatus = remainingKm <= 0 ? "overdue" : remainingKm <= rule.intervalKm * 0.1 ? "soon" : "ok";
+      }
+
+      let nextDueDate = null;
+      let remainingDays = null;
+      let dateStatus = null;
+      if (rule.intervalMonths) {
+        const base = lastDate ? new Date(lastDate) : now;
+        nextDueDate = new Date(base);
+        nextDueDate.setMonth(nextDueDate.getMonth() + rule.intervalMonths);
+        remainingDays = Math.round((nextDueDate - now) / (1000 * 60 * 60 * 24));
+        dateStatus = remainingDays <= 0 ? "overdue" : remainingDays <= 30 ? "soon" : "ok";
+      }
+
+      const statuses = [kmStatus, dateStatus].filter(Boolean);
+      const status = statuses.includes("overdue") ? "overdue" : statuses.includes("soon") ? "soon" : "ok";
+
+      return { ...rule, lastKm, lastDate, nextDueKm, remainingKm, nextDueDate, remainingDays, status };
+    });
+  }, [data]);
+
+  if (!ready || !data) {
+    return (
+      <div style={{ background: PALETTE.bg, minHeight: "100vh" }} className="flex items-center justify-center">
+        <div style={{ color: PALETTE.steel, fontFamily: FONT_MONO }}>Chargement…</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: PALETTE.bg, minHeight: "100vh", fontFamily: FONT_BODY, color: PALETTE.text }}>
+      <FontLoader />
+      <Header vehicle={data.vehicle} onEdit={() => setEditingVehicle(true)} />
+
+      <main className="max-w-md mx-auto px-4 pb-28 pt-4">
+        {tab === "dashboard" && (
+          <Dashboard
+            vehicle={data.vehicle}
+            avgConsumption={avgConsumption}
+            maintStatus={maintStatus}
+            fuelCount={data.fuel.length}
+            maintCount={data.maintenance.length}
+            onGoMaint={() => setTab("maintenance")}
+          />
+        )}
+
+        {tab === "fuel" && (
+          <FuelTab
+            entries={[...data.fuel].sort((a, b) => b.km - a.km)}
+            consumption={consumption}
+            onAdd={() => setShowFuelForm(true)}
+            onDelete={(id) => deleteItem("fuel", id)}
+          />
+        )}
+
+        {tab === "maintenance" && (
+          <MaintenanceTab
+            statuses={maintStatus}
+            history={[...data.maintenance].sort((a, b) => b.km - a.km)}
+            onAdd={() => setShowMaintForm(true)}
+            onDelete={(id) => deleteItem("maintenance", id)}
+          />
+        )}
+
+        {tab === "settings" && (
+          <SettingsTab
+            rules={data.rules}
+            onAdd={() => setShowRuleForm(true)}
+            onDelete={(id) => deleteItem("rules", id)}
+          />
+        )}
+      </main>
+
+      <TabBar tab={tab} setTab={setTab} />
+
+      {showFuelForm && (
+        <Modal title="Nouveau plein" onClose={() => setShowFuelForm(false)}>
+          <FuelForm onSubmit={addFuel} defaultKm={data.vehicle.currentKm} />
+        </Modal>
+      )}
+      {showMaintForm && (
+        <Modal title="Entretien effectué" onClose={() => setShowMaintForm(false)}>
+          <MaintenanceForm onSubmit={addMaintenance} defaultKm={data.vehicle.currentKm} types={data.rules.map((r) => r.name)} />
+        </Modal>
+      )}
+      {showRuleForm && (
+        <Modal title="Nouveau type d'entretien" onClose={() => setShowRuleForm(false)}>
+          <RuleForm onSubmit={addRule} />
+        </Modal>
+      )}
+      {editingVehicle && (
+        <Modal title="Ma moto" onClose={() => setEditingVehicle(false)}>
+          <VehicleForm
+            vehicle={data.vehicle}
+            onSubmit={(patch) => {
+              updateVehicle(patch);
+              setEditingVehicle(false);
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Design tokens ---------- */
+
+const PALETTE = {
+  bg: "#1B1A17",
+  surface: "#252320",
+  surfaceRaised: "#2E2B26",
+  steel: "#948C7C",
+  steelDim: "#6B6558",
+  amber: "#C97A2B",
+  amberSoft: "#E0985A",
+  yellow: "#E8B93B",
+  danger: "#C1442E",
+  ok: "#7A9B6E",
+  text: "#F1ECE2",
+  textMuted: "#B4AC9C",
+  hairline: "#3A362F",
+};
+
+const FONT_DISPLAY = "'Oswald', sans-serif";
+const FONT_BODY = "'Work Sans', sans-serif";
+const FONT_MONO = "'JetBrains Mono', monospace";
+
+function FontLoader() {
+  return (
+    <style>{`
+      @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap');
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      input, select { outline: none; }
+      input:focus, select:focus { border-color: ${PALETTE.amber} !important; }
+      ::placeholder { color: ${PALETTE.steelDim}; }
+    `}</style>
+  );
+}
+
+/* ---------- Header ---------- */
+
+function Header({ vehicle, onEdit }) {
+  return (
+    <header
+      style={{ borderBottom: `1px solid ${PALETTE.hairline}`, background: PALETTE.surface }}
+      className="px-4 py-4"
+    >
+      <div className="max-w-md mx-auto flex items-center justify-between">
+        <div>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, letterSpacing: "0.12em", color: PALETTE.amber }}>
+            CARNET D'ENTRETIEN
+          </div>
+          <button onClick={onEdit} className="text-left" style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: PALETTE.text }}>
+            {vehicle.name}
+          </button>
+        </div>
+        <div className="text-right">
+          <div style={{ fontFamily: FONT_MONO, fontSize: 26, fontWeight: 700, color: PALETTE.text, letterSpacing: "0.02em" }}>
+            {fmtKm(vehicle.currentKm)}
+          </div>
+          <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted, letterSpacing: "0.05em" }}>
+            KM AU COMPTEUR
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ---------- Dashboard ---------- */
+
+function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount, onGoMaint }) {
+  const overdue = maintStatus.filter((m) => m.status === "overdue");
+  const soon = maintStatus.filter((m) => m.status === "soon");
+
+  return (
+    <div className="space-y-4 mt-2">
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard label="Conso. moyenne" value={avgConsumption ? avgConsumption.toFixed(1) : "—"} unit="L/100km" />
+        <StatCard label="Pleins enregistrés" value={fuelCount} unit={fuelCount > 1 ? "entrées" : "entrée"} />
+      </div>
+
+      {(overdue.length > 0 || soon.length > 0) && (
+        <div
+          style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }}
+          className="p-4"
+        >
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
+            À SURVEILLER
+          </div>
+          <div className="space-y-2">
+            {overdue.map((m) => (
+              <AlertRow key={m.id} rule={m} />
+            ))}
+            {soon.map((m) => (
+              <AlertRow key={m.id} rule={m} />
+            ))}
+          </div>
+          <button onClick={onGoMaint} style={{ color: PALETTE.amberSoft, fontFamily: FONT_BODY, fontSize: 13 }} className="mt-3 font-medium">
+            Voir l'entretien →
+          </button>
+        </div>
+      )}
+
+      {overdue.length === 0 && soon.length === 0 && maintCount > 0 && (
+        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4 flex items-center gap-3">
+          <CheckCircle2 size={20} color={PALETTE.ok} />
+          <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
+            Tout l'entretien est à jour.
+          </div>
+        </div>
+      )}
+
+      {maintCount === 0 && (
+        <div style={{ background: PALETTE.surface, border: `1px dashed ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+          <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
+            Aucun entretien enregistré pour l'instant. Ajoute ta dernière vidange ou révision pour démarrer le suivi.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ label, value, unit }) {
+  return (
+    <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+      <div style={{ fontFamily: FONT_MONO, fontSize: 28, fontWeight: 700, color: PALETTE.text }}>{value}</div>
+      <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }}>
+        {unit} · {label}
+      </div>
+    </div>
+  );
+}
+
+function remainingLabel(rule) {
+  // Priorise l'échéance la plus pressante entre km et calendaire
+  const kmUrgency = rule.remainingKm != null ? rule.remainingKm : Infinity;
+  const dateUrgencyKm = rule.remainingDays != null ? rule.remainingDays : Infinity;
+  if (kmUrgency <= dateUrgencyKm && rule.remainingKm != null) {
+    return rule.remainingKm <= 0 ? `dépassé de ${fmtKm(-rule.remainingKm)} km` : `dans ${fmtKm(rule.remainingKm)} km`;
+  }
+  if (rule.remainingDays != null) {
+    return rule.remainingDays <= 0 ? `dépassé de ${Math.abs(rule.remainingDays)} j` : `dans ${rule.remainingDays} j`;
+  }
+  return "";
+}
+
+function AlertRow({ rule }) {
+  const isOverdue = rule.status === "overdue";
+  const color = isOverdue ? PALETTE.danger : PALETTE.yellow;
+  const Icon = isOverdue ? AlertTriangle : Clock;
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Icon size={16} color={color} />
+        <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{rule.name}</span>
+      </div>
+      <span style={{ fontFamily: FONT_MONO, fontSize: 13, color }}>{remainingLabel(rule)}</span>
+    </div>
+  );
+}
+
+/* ---------- Fuel tab ---------- */
+
+function FuelTab({ entries, consumption, onAdd, onDelete }) {
+  const consByEntry = Object.fromEntries(consumption.map((c) => [c.id, c.value]));
+  return (
+    <div className="mt-2">
+      <SectionHeader title="Pleins de carburant" onAdd={onAdd} addLabel="Ajouter un plein" />
+      {entries.length === 0 ? (
+        <EmptyState text="Aucun plein enregistré. Ajoute ton premier plein pour suivre la consommation." />
+      ) : (
+        <div className="space-y-2">
+          {entries.map((e) => (
+            <Card key={e.id} onDelete={() => onDelete(e.id)}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <div style={{ fontFamily: FONT_MONO, fontSize: 16, color: PALETTE.text }}>{fmtKm(e.km)} km</div>
+                  <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }}>{fmtDate(e.date)}</div>
+                </div>
+                <div className="text-right">
+                  {e.liters ? (
+                    <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>
+                      {e.liters} L{e.price ? ` · ${e.price} €` : ""}
+                    </div>
+                  ) : (
+                    <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted, fontStyle: "italic" }}>
+                      Litres à compléter
+                    </div>
+                  )}
+                  {consByEntry[e.id] && (
+                    <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.amberSoft }}>
+                      {consByEntry[e.id].toFixed(1)} L/100km
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Maintenance tab ---------- */
+
+function MaintenanceTab({ statuses, history, onAdd, onDelete }) {
+  return (
+    <div className="mt-2 space-y-6">
+      <div>
+        <SectionHeader title="Suivi par intervalle" onAdd={onAdd} addLabel="Entretien effectué" />
+        <div className="space-y-2">
+          {statuses.map((s) => (
+            <div key={s.id} style={{ background: PALETTE.surface, border: `1px solid ${s.status !== "ok" ? (s.status === "overdue" ? PALETTE.danger : PALETTE.yellow) : PALETTE.hairline}`, borderRadius: 10 }} className="p-3">
+              <div className="flex justify-between items-center">
+                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: PALETTE.text }}>{s.name}</span>
+                <StatusPill status={s.status} />
+              </div>
+              <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mt-1">
+                {s.lastKm != null ? `Dernier : ${fmtKm(s.lastKm)} km (${fmtDate(s.lastDate)})` : "Jamais renseigné"}
+                {s.nextDueKm != null ? ` · Prochain à ${fmtKm(s.nextDueKm)} km` : ""}
+                {s.nextDueDate != null ? ` · avant le ${fmtDate(s.nextDueDate)}` : ""}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-2">
+          HISTORIQUE
+        </div>
+        {history.length === 0 ? (
+          <EmptyState text="Aucune intervention enregistrée." />
+        ) : (
+          <div className="space-y-2">
+            {history.map((m) => (
+              <Card key={m.id} onDelete={() => onDelete(m.id)}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: PALETTE.text }}>{m.type}</div>
+                    <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }}>{fmtDate(m.date)} · {fmtKm(m.km)} km</div>
+                    {m.note && <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mt-1">{m.note}</div>}
+                  </div>
+                  {m.cost && <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.text }}>{m.cost} €</div>}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({ status }) {
+  const map = {
+    ok: { label: "À jour", color: PALETTE.ok },
+    soon: { label: "Bientôt", color: PALETTE.yellow },
+    overdue: { label: "Dépassé", color: PALETTE.danger },
+  };
+  const { label, color } = map[status];
+  return (
+    <span style={{ fontFamily: FONT_MONO, fontSize: 11, color, border: `1px solid ${color}`, borderRadius: 999, padding: "2px 8px" }}>
+      {label}
+    </span>
+  );
+}
+
+/* ---------- Settings tab ---------- */
+
+function SettingsTab({ rules, onAdd, onDelete }) {
+  return (
+    <div className="mt-2">
+      <SectionHeader title="Types d'entretien suivis" onAdd={onAdd} addLabel="Nouveau type" />
+      <div className="space-y-2">
+        {rules.map((r) => (
+          <Card key={r.id} onDelete={() => onDelete(r.id)}>
+            <div className="flex justify-between items-center">
+              <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{r.name}</span>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
+                {[r.intervalKm ? `${fmtKm(r.intervalKm)} km` : null, r.intervalMonths ? `${r.intervalMonths} mois` : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Shared UI ---------- */
+
+function SectionHeader({ title, onAdd, addLabel }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }}>{title}</div>
+      <button
+        onClick={onAdd}
+        style={{ background: PALETTE.amber, color: "#1B1A17", fontFamily: FONT_BODY, fontWeight: 600, fontSize: 12, borderRadius: 8 }}
+        className="flex items-center gap-1 px-3 py-2"
+      >
+        <Plus size={14} /> {addLabel}
+      </button>
+    </div>
+  );
+}
+
+function Card({ children, onDelete }) {
+  return (
+    <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-3 relative group">
+      {children}
+      <button
+        onClick={onDelete}
+        aria-label="Supprimer"
+        style={{ color: PALETTE.steelDim }}
+        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+}
+
+function EmptyState({ text }) {
+  return (
+    <div style={{ background: PALETTE.surface, border: `1px dashed ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+      <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.textMuted }}>{text}</div>
+    </div>
+  );
+}
+
+function TabBar({ tab, setTab }) {
+  const items = [
+    { id: "dashboard", label: "Accueil", icon: Gauge },
+    { id: "fuel", label: "Carburant", icon: Fuel },
+    { id: "maintenance", label: "Entretien", icon: Wrench },
+    { id: "settings", label: "Réglages", icon: Settings },
+  ];
+  return (
+    <nav
+      style={{ background: PALETTE.surface, borderTop: `1px solid ${PALETTE.hairline}` }}
+      className="fixed bottom-0 left-0 right-0"
+    >
+      <div className="max-w-md mx-auto grid grid-cols-4">
+        {items.map((it) => {
+          const active = tab === it.id;
+          const Icon = it.icon;
+          return (
+            <button key={it.id} onClick={() => setTab(it.id)} className="flex flex-col items-center gap-1 py-3">
+              <Icon size={20} color={active ? PALETTE.amber : PALETTE.steelDim} />
+              <span style={{ fontFamily: FONT_BODY, fontSize: 10, color: active ? PALETTE.amber : PALETTE.steelDim }}>
+                {it.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: PALETTE.surfaceRaised, borderRadius: "14px 14px 0 0", maxWidth: 420 }}
+        className="w-full sm:rounded-2xl p-5 max-h-[85vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 600, color: PALETTE.text }}>{title}</div>
+          <button onClick={onClose} style={{ color: PALETTE.steelDim }}>
+            <X size={20} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div className="mb-3">
+      <label style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="block mb-1">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%",
+  background: PALETTE.surface,
+  border: `1px solid ${PALETTE.hairline}`,
+  borderRadius: 8,
+  padding: "10px 12px",
+  color: PALETTE.text,
+  fontFamily: FONT_BODY,
+  fontSize: 14,
+};
+
+const submitStyle = {
+  width: "100%",
+  background: PALETTE.amber,
+  color: "#1B1A17",
+  fontFamily: FONT_BODY,
+  fontWeight: 600,
+  fontSize: 14,
+  borderRadius: 8,
+  padding: "12px",
+  marginTop: 8,
+};
+
+function FuelForm({ onSubmit, defaultKm }) {
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), km: defaultKm || "", liters: "", price: "" });
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!form.km || !form.liters) return;
+        onSubmit(form);
+      }}
+    >
+      <Field label="Date">
+        <input style={inputStyle} type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+      </Field>
+      <Field label="Kilométrage">
+        <input style={inputStyle} type="number" placeholder="ex. 12450" value={form.km} onChange={(e) => setForm({ ...form, km: e.target.value })} />
+      </Field>
+      <Field label="Litres">
+        <input style={inputStyle} type="number" step="0.01" placeholder="ex. 14.2" value={form.liters} onChange={(e) => setForm({ ...form, liters: e.target.value })} />
+      </Field>
+      <Field label="Prix total (€) — optionnel">
+        <input style={inputStyle} type="number" step="0.01" placeholder="ex. 22.50" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+      </Field>
+      <button type="submit" style={submitStyle}>Enregistrer le plein</button>
+    </form>
+  );
+}
+
+function MaintenanceForm({ onSubmit, defaultKm, types }) {
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), km: defaultKm || "", type: types[0] || "", note: "", cost: "" });
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!form.km || !form.type) return;
+        onSubmit(form);
+      }}
+    >
+      <Field label="Type d'entretien">
+        <select style={inputStyle} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+          {types.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+          <option value="Autre">Autre</option>
+        </select>
+      </Field>
+      <Field label="Date">
+        <input style={inputStyle} type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+      </Field>
+      <Field label="Kilométrage">
+        <input style={inputStyle} type="number" placeholder="ex. 12450" value={form.km} onChange={(e) => setForm({ ...form, km: e.target.value })} />
+      </Field>
+      <Field label="Note — optionnel">
+        <input style={inputStyle} type="text" placeholder="ex. huile 10W40, filtre changé" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+      </Field>
+      <Field label="Coût (€) — optionnel">
+        <input style={inputStyle} type="number" step="0.01" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} />
+      </Field>
+      <button type="submit" style={submitStyle}>Enregistrer l'entretien</button>
+    </form>
+  );
+}
+
+function RuleForm({ onSubmit }) {
+  const [form, setForm] = useState({ name: "", intervalKm: "", intervalMonths: "" });
+  const canSubmit = form.name && (form.intervalKm || form.intervalMonths);
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!canSubmit) return;
+        onSubmit({
+          name: form.name,
+          intervalKm: form.intervalKm ? Number(form.intervalKm) : undefined,
+          intervalMonths: form.intervalMonths ? Number(form.intervalMonths) : undefined,
+        });
+      }}
+    >
+      <Field label="Nom">
+        <input style={inputStyle} type="text" placeholder="ex. Liquide de frein" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+      </Field>
+      <Field label="Intervalle en kilomètres — optionnel">
+        <input style={inputStyle} type="number" placeholder="ex. 20000" value={form.intervalKm} onChange={(e) => setForm({ ...form, intervalKm: e.target.value })} />
+      </Field>
+      <Field label="Intervalle en mois — optionnel">
+        <input style={inputStyle} type="number" placeholder="ex. 24" value={form.intervalMonths} onChange={(e) => setForm({ ...form, intervalMonths: e.target.value })} />
+      </Field>
+      <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mb-2">
+        Renseigne au moins un des deux. L'alerte se déclenchera sur celui qui arrive en premier.
+      </div>
+      <button type="submit" style={submitStyle} disabled={!canSubmit}>Ajouter</button>
+    </form>
+  );
+}
+
+function VehicleForm({ vehicle, onSubmit }) {
+  const [form, setForm] = useState({ name: vehicle.name, currentKm: vehicle.currentKm });
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({ name: form.name, currentKm: Number(form.currentKm) });
+      }}
+    >
+      <Field label="Nom de la moto">
+        <input style={inputStyle} type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+      </Field>
+      <Field label="Kilométrage actuel">
+        <input style={inputStyle} type="number" value={form.currentKm} onChange={(e) => setForm({ ...form, currentKm: e.target.value })} />
+      </Field>
+      <button type="submit" style={submitStyle}>Mettre à jour</button>
+    </form>
+  );
+}
