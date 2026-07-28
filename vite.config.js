@@ -9,3 +9,8 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] })
   ],
 })
+
+export default defineConfig({
+  base: '/Moto-Tracker/',
+  plugins: [react()],
+})

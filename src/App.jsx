@@ -21,53 +21,41 @@ const DEFAULT_RULES = [
 const IMPORTED_MAINTENANCE = [
   { date: "2025-02-14", km: 51231, type: "Pression des pneus" },
   { date: "2025-02-14", km: 51231, type: "Contrôle plaquettes et disques" },
-  { date: "2025-02-14", km: 51231, type: "Usure pneu avant" },
   { date: "2025-02-14", km: 51231, type: "Entretien annuel" },
   { date: "2025-02-14", km: 51231, type: "Graissage de la chaîne" },
-  { date: "2025-02-14", km: 51231, type: "Usure pneu arrière" },
   { date: "2025-02-14", km: 51231, type: "Tension de la chaîne" },
   { date: "2025-02-24", km: 51794, type: "Tension de la chaîne" },
   { date: "2025-02-24", km: 51794, type: "Pression des pneus" },
   { date: "2025-02-24", km: 51794, type: "Graissage de la chaîne" },
   { date: "2025-03-04", km: 52318, type: "Graissage de la chaîne" },
   { date: "2025-03-04", km: 52318, type: "Pression des pneus" },
-  { date: "2025-03-07", km: 52712, type: "Usure pneu arrière" },
   { date: "2025-03-07", km: 52730, type: "Pression des pneus" },
   { date: "2025-03-20", km: 53223, type: "Tension de la chaîne" },
-  { date: "2025-03-20", km: 53223, type: "Usure pneu arrière" },
   { date: "2025-03-20", km: 53223, type: "Graissage de la chaîne" },
   { date: "2025-03-20", km: 53223, type: "Pression des pneus" },
   { date: "2025-03-31", km: 53949, type: "Pression des pneus" },
   { date: "2025-04-03", km: 54054, type: "Graissage de la chaîne" },
-  { date: "2025-04-21", km: 54541, type: "Usure pneu arrière" },
   { date: "2025-04-26", km: 54943, type: "Pression des pneus" },
   { date: "2025-04-26", km: 54943, type: "Graissage de la chaîne" },
   { date: "2025-05-02", km: 55231, type: "Tension de la chaîne" },
   { date: "2025-05-10", km: 55553, type: "Pression des pneus" },
-  { date: "2025-05-10", km: 55553, type: "Usure pneu arrière" },
   { date: "2025-05-18", km: 55975, type: "Pression des pneus" },
   { date: "2025-05-18", km: 55975, type: "Graissage de la chaîne" },
-  { date: "2025-05-24", km: 56223, type: "Usure pneu arrière" },
-  { date: "2025-05-24", km: 56223, type: "Usure pneu avant" },
   { date: "2025-08-01", km: 57249, type: "Graissage de la chaîne" },
-  { date: "2025-08-01", km: 57249, type: "Usure pneu arrière" },
   { date: "2025-08-01", km: 57249, type: "Pression des pneus" },
   { date: "2025-08-01", km: 57249, type: "Tension de la chaîne" },
   { date: "2025-08-04", km: 57568, type: "Pression des pneus" },
   { date: "2025-08-13", km: 58178, type: "Pression des pneus" },
   { date: "2025-08-13", km: 58178, type: "Graissage de la chaîne" },
-  { date: "2025-08-16", km: 58267, type: "Usure pneu arrière" },
   { date: "2025-08-30", km: 58646, type: "Pression des pneus" },
   { date: "2025-09-05", km: 59246, type: "Pression des pneus" },
   { date: "2025-09-05", km: 59246, type: "Graissage de la chaîne" },
   { date: "2025-09-06", km: 59686, type: "Pression des pneus" },
   { date: "2025-09-06", km: 59686, type: "Graissage de la chaîne" },
   { date: "2025-09-16", km: 60001, type: "Tension de la chaîne" },
-  { date: "2025-09-18", km: 60008, type: "Usure pneu arrière" },
   { date: "2025-09-30", km: 60310, type: "Pression des pneus" },
   { date: "2025-10-10", km: 60852, type: "Graissage de la chaîne" },
   { date: "2025-10-10", km: 60852, type: "Pression des pneus" },
-  { date: "2025-10-24", km: 61090, type: "Usure pneu arrière" },
   { date: "2025-10-24", km: 61090, type: "Contrôle plaquettes et disques" },
   { date: "2025-10-24", km: 61090, type: "Purge des liquides de frein" },
   { date: "2025-10-24", km: 61090, type: "Vidange", note: "Filtre à huile changé" },
@@ -76,31 +64,25 @@ const IMPORTED_MAINTENANCE = [
   { date: "2025-10-24", km: 61090, type: "Entretien annuel" },
   { date: "2025-12-14", km: 61551, type: "Pression des pneus" },
   { date: "2026-02-22", km: 62123, type: "Tension de la chaîne" },
-  { date: "2026-02-22", km: 62123, type: "Usure pneu arrière" },
   { date: "2026-02-22", km: 62123, type: "Pression des pneus" },
   { date: "2026-02-22", km: 62123, type: "Graissage de la chaîne" },
   { date: "2026-03-26", km: 62806, type: "Pression des pneus" },
   { date: "2026-03-26", km: 62806, type: "Graissage de la chaîne" },
-  { date: "2026-03-30", km: 63176, type: "Usure pneu arrière" },
   { date: "2026-04-13", km: 63680, type: "Graissage de la chaîne" },
   { date: "2026-04-13", km: 63680, type: "Pression des pneus" },
   { date: "2026-04-17", km: 64169, type: "Tension de la chaîne" },
-  { date: "2026-04-17", km: 64265, type: "Usure pneu avant" },
   { date: "2026-04-17", km: 64265, type: "Pression des pneus" },
-  { date: "2026-04-17", km: 64265, type: "Usure pneu arrière" },
   { date: "2026-05-31", km: 66169, type: "Pression des pneus" },
   { date: "2026-05-31", km: 66169, type: "Graissage de la chaîne" },
   { date: "2026-05-31", km: 66169, type: "Tension de la chaîne" },
-  { date: "2026-05-31", km: 66169, type: "Usure pneu arrière" },
   { date: "2026-07-08", km: 67934, type: "Pression des pneus" },
-  { date: "2026-07-08", km: 67934, type: "Usure pneu arrière" },
   { date: "2026-07-23", km: 68453, type: "Pression des pneus" },
   { date: "2026-07-23", km: 68453, type: "Tension de la chaîne" },
 ].map((m, i) => ({ id: `import-${i}`, ...m }));
 
 const DEFAULT_DATA = {
   vehicle: { name: "CB500F 2016", currentKm: 68984 },
-  fuel: [{ id: "fuel-1", date: "2026-07-28", km: 68842 }],
+  fuel: [{ id: "fuel-1", date: "2026-07-26", km: 68842, price: 23.42 }],
   maintenance: IMPORTED_MAINTENANCE,
   rules: DEFAULT_RULES,
 };
@@ -124,22 +106,20 @@ export default function MotoTracker() {
   const [editingVehicle, setEditingVehicle] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await window.storage.get(STORAGE_KEY);
-        setData(res && res.value ? JSON.parse(res.value) : DEFAULT_DATA);
-      } catch (e) {
-        setData(DEFAULT_DATA);
-      } finally {
-        setReady(true);
-      }
-    })();
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      setData(raw ? JSON.parse(raw) : DEFAULT_DATA);
+    } catch (e) {
+      setData(DEFAULT_DATA);
+    } finally {
+      setReady(true);
+    }
   }, []);
 
-  const persist = useCallback(async (next) => {
+  const persist = useCallback((next) => {
     setData(next);
     try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify(next));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     } catch (e) {
       console.error("Erreur de sauvegarde", e);
     }
@@ -514,7 +494,7 @@ function FuelTab({ entries, consumption, onAdd, onDelete }) {
                     </div>
                   ) : (
                     <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted, fontStyle: "italic" }}>
-                      Litres à compléter
+                      {e.price ? `${e.price} € · litres à compléter` : "Litres à compléter"}
                     </div>
                   )}
                   {consByEntry[e.id] && (
