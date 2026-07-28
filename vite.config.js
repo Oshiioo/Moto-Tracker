@@ -4,13 +4,9 @@ import babel from '@rolldown/plugin-babel'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/Moto-Tracker/',
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
-})
-
-export default defineConfig({
-  base: '/Moto-Tracker/',
-  plugins: [react()],
 })
