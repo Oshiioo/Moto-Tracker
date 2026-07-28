@@ -3,6 +3,8 @@ import { Fuel, Wrench, Gauge, Settings, Plus, Trash2, X, AlertTriangle, CheckCir
 
 const STORAGE_KEY = "moto-tracker-data";
 const GEMINI_MODEL = "gemini-2.5-flash";
+// Clé lue depuis le fichier .env.local (voir instructions), jamais depuis l'interface
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 async function geminiExtract(apiKey, { promptText, imageBase64, imageMimeType }) {
   const parts = [{ text: promptText }];
@@ -119,7 +121,6 @@ const DEFAULT_DATA = {
   fuel: [{ id: "fuel-1", date: "2026-07-26", km: 68842, price: 23.42 }],
   maintenance: IMPORTED_MAINTENANCE,
   rules: DEFAULT_RULES,
-  settings: { geminiApiKey: "" },
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -161,7 +162,6 @@ export default function MotoTracker() {
   }, []);
 
   const updateVehicle = (patch) => persist({ ...data, vehicle: { ...data.vehicle, ...patch } });
-  const updateSettings = (patch) => persist({ ...data, settings: { ...(data.settings || {}), ...patch } });
 
   const addFuel = (entry) => {
     const km = Number(entry.km);
@@ -310,8 +310,7 @@ export default function MotoTracker() {
             rules={data.rules}
             onAdd={() => setShowRuleForm(true)}
             onDelete={(id) => deleteItem("rules", id)}
-            apiKey={data.settings?.geminiApiKey || ""}
-            onSaveApiKey={(key) => updateSettings({ geminiApiKey: key })}
+            apiKeyConfigured={!!GEMINI_API_KEY}
           />
         )}
       </main>
@@ -320,7 +319,7 @@ export default function MotoTracker() {
 
       {showFuelForm && (
         <Modal title="Nouveau plein" onClose={() => setShowFuelForm(false)}>
-          <FuelForm onSubmit={addFuel} defaultKm={data.vehicle.currentKm} apiKey={data.settings?.geminiApiKey || ""} />
+          <FuelForm onSubmit={addFuel} defaultKm={data.vehicle.currentKm} apiKey={GEMINI_API_KEY} />
         </Modal>
       )}
       {showMaintForm && (
@@ -329,7 +328,7 @@ export default function MotoTracker() {
             onSubmit={addMaintenance}
             defaultKm={data.vehicle.currentKm}
             types={data.rules.map((r) => r.name)}
-            apiKey={data.settings?.geminiApiKey || ""}
+            apiKey={GEMINI_API_KEY}
           />
         </Modal>
       )}
@@ -622,9 +621,7 @@ function StatusPill({ status }) {
 
 /* ---------- Settings tab ---------- */
 
-function SettingsTab({ rules, onAdd, onDelete, apiKey, onSaveApiKey }) {
-  const [keyInput, setKeyInput] = useState(apiKey);
-  const [saved, setSaved] = useState(false);
+function SettingsTab({ rules, onAdd, onDelete, apiKeyConfigured }) {
   return (
     <div className="mt-2 space-y-6">
       <div>
@@ -632,38 +629,21 @@ function SettingsTab({ rules, onAdd, onDelete, apiKey, onSaveApiKey }) {
           Saisie par photo / voix
         </div>
         <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
-          <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-3">
-            Colle ta clé API Gemini (gratuite sur{" "}
-            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: PALETTE.amberSoft }}>
-              aistudio.google.com/apikey
-            </a>
-            ) pour activer la reconnaissance photo et vocale sur les pleins et entretiens. Elle reste stockée uniquement
-            dans ton navigateur et n'est envoyée qu'à Google lors d'une analyse.
-          </div>
-          <div className="flex gap-2">
-            <input
-              style={{ ...inputStyle, flex: 1 }}
-              type="password"
-              placeholder="AIzaSy..."
-              value={keyInput}
-              onChange={(e) => {
-                setKeyInput(e.target.value);
-                setSaved(false);
-              }}
-            />
-            <button
-              onClick={() => {
-                onSaveApiKey(keyInput.trim());
-                setSaved(true);
-              }}
-              style={{ background: PALETTE.amber, color: "#1B1A17", fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, borderRadius: 8, padding: "0 16px" }}
-            >
-              Sauver
-            </button>
-          </div>
-          {saved && (
-            <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.ok }} className="mt-2">
-              Clé enregistrée.
+          {apiKeyConfigured ? (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} color={PALETTE.ok} />
+              <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>
+                Clé API Gemini configurée — photo et dictée disponibles sur les pleins et entretiens.
+              </span>
+            </div>
+          ) : (
+            <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }}>
+              Aucune clé API Gemini détectée. Ajoute <code>VITE_GEMINI_API_KEY=ta_clé</code> dans un fichier{" "}
+              <code>.env.local</code> à la racine du projet (clé gratuite sur{" "}
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: PALETTE.amberSoft }}>
+                aistudio.google.com/apikey
+              </a>
+              ), puis redémarre <code>npm run dev</code>.
             </div>
           )}
         </div>
