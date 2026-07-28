@@ -1,55 +1,13 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Moto Tracker - Honda CB500F</title>
-
-  <!-- Tailwind CSS pour la mise en page -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- 1. Polyfill pour remplacer l'API window.storage par le localStorage standard du navigateur -->
-  <script>
-    if (!window.storage) {
-      window.storage = {
-        async get(key) {
-          const val = localStorage.getItem(key);
-          return val ? { value: val } : null;
-        },
-        async set(key, value) {
-          localStorage.setItem(key, value);
-        }
-      };
-    }
-  </script>
-
-  <!-- 2. Import Maps pour permettre les imports 'react' et 'lucide-react' directement dans le navigateur -->
-  <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react"
-      }
-    }
-  </script>
-
-  <!-- Babel Standalone pour transpiler le JSX à la volée -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-</head>
-<body class="bg-[#1B1A17] text-[#F1ECE2] min-h-screen">
-
-  <!-- Point d'ancrage de l'application -->
-  <div id="root"></div>
-
-  <!-- Chargement et affichage du composant React -->
-  <script type="text/babel" data-type="module">
-    import React from 'react';
-    import { createRoot } from 'react-dom/client';
-    import MotoTracker from './App.jsx';
-
-    const root = createRoot(document.getElementById('root'));
-    root.render(<MotoTracker />);
-  </script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>moto-tracker</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
