@@ -1,7 +1,41 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Fuel, Wrench, Gauge, Settings, Plus, Trash2, X, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { Fuel, Wrench, Gauge, Settings, Plus, Trash2, X, AlertTriangle, CheckCircle2, Clock, Camera, Mic, Loader2 } from "lucide-react";
 
 const STORAGE_KEY = "moto-tracker-data";
+const GEMINI_MODEL = "gemini-2.5-flash";
+
+async function geminiExtract(apiKey, { promptText, imageBase64, imageMimeType }) {
+  const parts = [{ text: promptText }];
+  if (imageBase64) parts.push({ inline_data: { mime_type: imageMimeType, data: imageBase64 } });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { responseMimeType: "application/json" },
+      }),
+    }
+  );
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Erreur Gemini (${res.status}) — vérifie ta clé API`);
+  }
+  const data = await res.json();
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) throw new Error("Réponse vide, réessaie");
+  return JSON.parse(raw);
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 // Préconisations constructeur Honda CB500F 2016, alignées sur les libellés
 // utilisés dans l'historique importé depuis LibertyRider
@@ -85,6 +119,7 @@ const DEFAULT_DATA = {
   fuel: [{ id: "fuel-1", date: "2026-07-26", km: 68842, price: 23.42 }],
   maintenance: IMPORTED_MAINTENANCE,
   rules: DEFAULT_RULES,
+  settings: { geminiApiKey: "" },
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -126,6 +161,7 @@ export default function MotoTracker() {
   }, []);
 
   const updateVehicle = (patch) => persist({ ...data, vehicle: { ...data.vehicle, ...patch } });
+  const updateSettings = (patch) => persist({ ...data, settings: { ...(data.settings || {}), ...patch } });
 
   const addFuel = (entry) => {
     const km = Number(entry.km);
@@ -274,6 +310,8 @@ export default function MotoTracker() {
             rules={data.rules}
             onAdd={() => setShowRuleForm(true)}
             onDelete={(id) => deleteItem("rules", id)}
+            apiKey={data.settings?.geminiApiKey || ""}
+            onSaveApiKey={(key) => updateSettings({ geminiApiKey: key })}
           />
         )}
       </main>
@@ -282,12 +320,17 @@ export default function MotoTracker() {
 
       {showFuelForm && (
         <Modal title="Nouveau plein" onClose={() => setShowFuelForm(false)}>
-          <FuelForm onSubmit={addFuel} defaultKm={data.vehicle.currentKm} />
+          <FuelForm onSubmit={addFuel} defaultKm={data.vehicle.currentKm} apiKey={data.settings?.geminiApiKey || ""} />
         </Modal>
       )}
       {showMaintForm && (
         <Modal title="Entretien effectué" onClose={() => setShowMaintForm(false)}>
-          <MaintenanceForm onSubmit={addMaintenance} defaultKm={data.vehicle.currentKm} types={data.rules.map((r) => r.name)} />
+          <MaintenanceForm
+            onSubmit={addMaintenance}
+            defaultKm={data.vehicle.currentKm}
+            types={data.rules.map((r) => r.name)}
+            apiKey={data.settings?.geminiApiKey || ""}
+          />
         </Modal>
       )}
       {showRuleForm && (
@@ -579,23 +622,69 @@ function StatusPill({ status }) {
 
 /* ---------- Settings tab ---------- */
 
-function SettingsTab({ rules, onAdd, onDelete }) {
+function SettingsTab({ rules, onAdd, onDelete, apiKey, onSaveApiKey }) {
+  const [keyInput, setKeyInput] = useState(apiKey);
+  const [saved, setSaved] = useState(false);
   return (
-    <div className="mt-2">
-      <SectionHeader title="Types d'entretien suivis" onAdd={onAdd} addLabel="Nouveau type" />
-      <div className="space-y-2">
-        {rules.map((r) => (
-          <Card key={r.id} onDelete={() => onDelete(r.id)}>
-            <div className="flex justify-between items-center">
-              <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{r.name}</span>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
-                {[r.intervalKm ? `${fmtKm(r.intervalKm)} km` : null, r.intervalMonths ? `${r.intervalMonths} mois` : null]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
+    <div className="mt-2 space-y-6">
+      <div>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-2">
+          Saisie par photo / voix
+        </div>
+        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+          <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-3">
+            Colle ta clé API Gemini (gratuite sur{" "}
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: PALETTE.amberSoft }}>
+              aistudio.google.com/apikey
+            </a>
+            ) pour activer la reconnaissance photo et vocale sur les pleins et entretiens. Elle reste stockée uniquement
+            dans ton navigateur et n'est envoyée qu'à Google lors d'une analyse.
+          </div>
+          <div className="flex gap-2">
+            <input
+              style={{ ...inputStyle, flex: 1 }}
+              type="password"
+              placeholder="AIzaSy..."
+              value={keyInput}
+              onChange={(e) => {
+                setKeyInput(e.target.value);
+                setSaved(false);
+              }}
+            />
+            <button
+              onClick={() => {
+                onSaveApiKey(keyInput.trim());
+                setSaved(true);
+              }}
+              style={{ background: PALETTE.amber, color: "#1B1A17", fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, borderRadius: 8, padding: "0 16px" }}
+            >
+              Sauver
+            </button>
+          </div>
+          {saved && (
+            <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.ok }} className="mt-2">
+              Clé enregistrée.
             </div>
-          </Card>
-        ))}
+          )}
+        </div>
+      </div>
+
+      <div>
+        <SectionHeader title="Types d'entretien suivis" onAdd={onAdd} addLabel="Nouveau type" />
+        <div className="space-y-2">
+          {rules.map((r) => (
+            <Card key={r.id} onDelete={() => onDelete(r.id)}>
+              <div className="flex justify-between items-center">
+                <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{r.name}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
+                  {[r.intervalKm ? `${fmtKm(r.intervalKm)} km` : null, r.intervalMonths ? `${r.intervalMonths} mois` : null]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -726,7 +815,108 @@ const submitStyle = {
   marginTop: 8,
 };
 
-function FuelForm({ onSubmit, defaultKm }) {
+function AiCaptureBar({ apiKey, onExtract, promptText, disabled }) {
+  const [status, setStatus] = useState("idle"); // idle | busy | error
+  const [error, setError] = useState("");
+  const fileRef = useRef(null);
+
+  const runExtraction = async (payload) => {
+    if (!apiKey) {
+      setError("Ajoute ta clé API Gemini dans Réglages pour activer ceci");
+      setStatus("error");
+      return;
+    }
+    setStatus("busy");
+    setError("");
+    try {
+      const result = await geminiExtract(apiKey, payload);
+      onExtract(result);
+      setStatus("idle");
+    } catch (e) {
+      setError(e.message || "Échec de l'analyse, réessaie");
+      setStatus("error");
+    }
+  };
+
+  const onFileChange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const base64 = await fileToBase64(file);
+    runExtraction({ promptText, imageBase64: base64, imageMimeType: file.type });
+  };
+
+  const onVoice = () => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      setError("Dictée vocale non supportée par ce navigateur");
+      setStatus("error");
+      return;
+    }
+    const rec = new SR();
+    rec.lang = "fr-FR";
+    rec.onstart = () => setStatus("busy");
+    rec.onerror = () => {
+      setError("Je n'ai pas entendu, réessaie");
+      setStatus("error");
+    };
+    rec.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      runExtraction({ promptText: `${promptText}\n\nTranscription vocale : "${transcript}"` });
+    };
+    rec.start();
+  };
+
+  return (
+    <div className="mb-4">
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={disabled || status === "busy"}
+          onClick={() => fileRef.current?.click()}
+          style={{ ...aiButtonStyle, opacity: status === "busy" ? 0.6 : 1 }}
+        >
+          <Camera size={14} /> Photo
+        </button>
+        <button
+          type="button"
+          disabled={disabled || status === "busy"}
+          onClick={onVoice}
+          style={{ ...aiButtonStyle, opacity: status === "busy" ? 0.6 : 1 }}
+        >
+          <Mic size={14} /> Dicter
+        </button>
+        {status === "busy" && (
+          <span className="flex items-center" style={{ color: PALETTE.amberSoft }}>
+            <Loader2 size={16} className="animate-spin" />
+          </span>
+        )}
+      </div>
+      {status === "error" && (
+        <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.danger }} className="mt-2">
+          {error}
+        </div>
+      )}
+      <input type="file" accept="image/*" capture="environment" ref={fileRef} style={{ display: "none" }} onChange={onFileChange} />
+    </div>
+  );
+}
+
+const aiButtonStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  background: PALETTE.surface,
+  border: `1px solid ${PALETTE.hairline}`,
+  color: PALETTE.amberSoft,
+  fontFamily: FONT_BODY,
+  fontSize: 12,
+  fontWeight: 600,
+  borderRadius: 8,
+  padding: "8px 12px",
+};
+
+function FuelForm({ onSubmit, defaultKm, apiKey }) {
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), km: defaultKm || "", liters: "", price: "" });
   return (
     <form
@@ -736,6 +926,18 @@ function FuelForm({ onSubmit, defaultKm }) {
         onSubmit(form);
       }}
     >
+      <AiCaptureBar
+        apiKey={apiKey}
+        promptText="Analyse cette photo de ticket de caisse ou d'écran de pompe à essence, ou cette transcription vocale d'un plein d'essence moto en français. Réponds uniquement en JSON strict, sans texte autour, avec les clés km (kilométrage au compteur si mentionné/visible, sinon null), liters (nombre de litres, sinon null), price (prix total payé en euros, sinon null)."
+        onExtract={(r) => {
+          setForm((f) => ({
+            ...f,
+            km: r.km != null ? String(r.km) : f.km,
+            liters: r.liters != null ? String(r.liters) : f.liters,
+            price: r.price != null ? String(r.price) : f.price,
+          }));
+        }}
+      />
       <Field label="Date">
         <input style={inputStyle} type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
       </Field>
@@ -753,7 +955,7 @@ function FuelForm({ onSubmit, defaultKm }) {
   );
 }
 
-function MaintenanceForm({ onSubmit, defaultKm, types }) {
+function MaintenanceForm({ onSubmit, defaultKm, types, apiKey }) {
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), km: defaultKm || "", type: types[0] || "", note: "", cost: "" });
   return (
     <form
@@ -763,6 +965,19 @@ function MaintenanceForm({ onSubmit, defaultKm, types }) {
         onSubmit(form);
       }}
     >
+      <AiCaptureBar
+        apiKey={apiKey}
+        promptText={`Analyse cette photo (facture d'atelier, écran de compteur) ou cette transcription vocale en français d'une intervention d'entretien moto. Réponds uniquement en JSON strict, sans texte autour, avec les clés km (kilométrage si mentionné/visible, sinon null), type (l'un de ces types si ça correspond : ${types.join(", ")} — sinon une courte description, sinon null), note (détails complémentaires, sinon null), cost (coût total en euros si mentionné, sinon null).`}
+        onExtract={(r) => {
+          setForm((f) => ({
+            ...f,
+            km: r.km != null ? String(r.km) : f.km,
+            type: r.type || f.type,
+            note: r.note || f.note,
+            cost: r.cost != null ? String(r.cost) : f.cost,
+          }));
+        }}
+      />
       <Field label="Type d'entretien">
         <select style={inputStyle} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
           {types.map((t) => (
