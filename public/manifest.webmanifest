@@ -1,0 +1,21 @@
+{
+  "name": "Moto Tracker",
+  "short_name": "Moto Tracker",
+  "start_url": "/Moto-Tracker/",
+  "display": "standalone",
+  "background_color": "#1B1A17",
+  "theme_color": "#1B1A17",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dictée rapide",
+      "short_name": "Dictée",
+      "description": "Ajoute un plein ou un entretien à la voix ou en photo",
+      "url": "/Moto-Tracker/?quickadd=1",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
