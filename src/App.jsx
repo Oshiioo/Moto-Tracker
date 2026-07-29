@@ -45,6 +45,48 @@ function fileToBase64(file) {
   });
 }
 
+// Types suivis mais sans rappel dédié (pas de règle intervalKm/intervalMonths)
+const EXTRA_KNOWN_TYPES = ["Pression des pneus"];
+
+// Filet de sécurité : rattache les synonymes courants au bon type existant,
+// même si Gemini répond avec une formulation légèrement différente
+const TYPE_SYNONYMS = [
+  { canonical: "Pression des pneus", keywords: ["pression", "gonfl"] },
+  { canonical: "Usure pneu avant", keywords: ["usure", "avant"] },
+  { canonical: "Usure pneu arrière", keywords: ["usure", "arrière", "arriere"] },
+  { canonical: "Graissage de la chaîne", keywords: ["graiss"] },
+  { canonical: "Tension de la chaîne", keywords: ["tension"] },
+  { canonical: "Vidange", keywords: ["vidange", "huile moteur"] },
+  { canonical: "Filtre à air", keywords: ["filtre à air", "filtre a air"] },
+  { canonical: "Bougies", keywords: ["bougie"] },
+  { canonical: "Contrôle plaquettes et disques", keywords: ["plaquette", "disque"] },
+  { canonical: "Purge des liquides de frein", keywords: ["purge", "liquide de frein"] },
+];
+
+function normalizeType(rawType, knownTypes) {
+  if (!rawType) return rawType;
+  const norm = rawType
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  // 1. Correspondance exacte avec un type déjà connu (insensible accents/casse)
+  const exact = knownTypes.find(
+    (t) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === norm
+  );
+  if (exact) return exact;
+
+  // 2. Correspondance par mots-clés/synonymes
+  for (const { canonical, keywords } of TYPE_SYNONYMS) {
+    if (knownTypes.includes(canonical) && keywords.some((k) => norm.includes(k))) {
+      return canonical;
+    }
+  }
+
+  // 3. Aucune correspondance : on garde tel quel, avec majuscule initiale
+  return rawType.charAt(0).toUpperCase() + rawType.slice(1);
+}
+
 // Préconisations constructeur Honda CB500F 2016, alignées sur les libellés
 // utilisés dans l'historique importé depuis LibertyRider
 const DEFAULT_RULES = [
@@ -57,6 +99,8 @@ const DEFAULT_RULES = [
   { id: "r7", name: "Purge des liquides de frein", intervalMonths: 24 },
   { id: "r8", name: "Liquide de refroidissement", intervalMonths: 36 },
   { id: "r9", name: "Entretien annuel", intervalMonths: 12 },
+  { id: "r10", name: "Usure pneu avant", intervalKm: 2000, hideFromPicker: true },
+  { id: "r11", name: "Usure pneu arrière", intervalKm: 2000, hideFromPicker: true },
 ];
 
 // Historique importé depuis LibertyRider (51 231 km → 68 453 km)
@@ -138,6 +182,28 @@ function loadData() {
   return DEFAULT_DATA;
 }
 
+function migrateData(loaded) {
+  let next = loaded;
+  const hasFrontTireRule = next.rules.some((r) => r.name === "Usure pneu avant");
+  const hasRearTireRule = next.rules.some((r) => r.name === "Usure pneu arrière");
+  if (!hasFrontTireRule || !hasRearTireRule) {
+    const today = new Date().toISOString().slice(0, 10);
+    const km = next.vehicle.currentKm;
+    const newRules = [...next.rules];
+    const newMaintenance = [...next.maintenance];
+    if (!hasFrontTireRule) {
+      newRules.push({ id: uid(), name: "Usure pneu avant", intervalKm: 2000, hideFromPicker: true });
+      newMaintenance.push({ id: uid(), date: today, km, type: "Usure pneu avant", note: "Point de départ du suivi" });
+    }
+    if (!hasRearTireRule) {
+      newRules.push({ id: uid(), name: "Usure pneu arrière", intervalKm: 2000, hideFromPicker: true });
+      newMaintenance.push({ id: uid(), date: today, km, type: "Usure pneu arrière", note: "Point de départ du suivi" });
+    }
+    next = { ...next, rules: newRules, maintenance: newMaintenance };
+  }
+  return next;
+}
+
 export default function MotoTracker() {
   const [data, setData] = useState(null);
   const [tab, setTab] = useState("dashboard");
@@ -151,7 +217,12 @@ export default function MotoTracker() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      setData(raw ? JSON.parse(raw) : DEFAULT_DATA);
+      const loaded = raw ? JSON.parse(raw) : DEFAULT_DATA;
+      const migrated = migrateData(loaded);
+      setData(migrated);
+      if (migrated !== loaded) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      }
     } catch (e) {
       setData(DEFAULT_DATA);
     } finally {
@@ -338,7 +409,7 @@ export default function MotoTracker() {
           <MaintenanceForm
             onSubmit={addMaintenance}
             defaultKm={data.vehicle.currentKm}
-            types={data.rules.map((r) => r.name)}
+            rules={data.rules}
             apiKey={GEMINI_API_KEY}
           />
         </Modal>
@@ -987,8 +1058,12 @@ function FuelForm({ onSubmit, defaultKm, apiKey }) {
   );
 }
 
-function MaintenanceForm({ onSubmit, defaultKm, types, apiKey }) {
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), km: defaultKm || "", type: types[0] || "", note: "", cost: "" });
+function MaintenanceForm({ onSubmit, defaultKm, rules, apiKey }) {
+  const types = rules.map((r) => r.name);
+  const pickerTypes = rules.filter((r) => !r.hideFromPicker).map((r) => r.name);
+  const knownTypes = [...types, ...EXTRA_KNOWN_TYPES.filter((t) => !types.includes(t))];
+  const visibleTypes = [...pickerTypes, ...EXTRA_KNOWN_TYPES.filter((t) => !pickerTypes.includes(t))];
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), km: defaultKm || "", type: pickerTypes[0] || "", note: "", cost: "" });
   return (
     <form
       onSubmit={(e) => {
@@ -999,24 +1074,30 @@ function MaintenanceForm({ onSubmit, defaultKm, types, apiKey }) {
     >
       <AiCaptureBar
         apiKey={apiKey}
-        promptText={`Analyse cette photo (facture d'atelier, écran de compteur) ou cette transcription vocale en français d'une intervention d'entretien moto. Réponds uniquement en JSON strict, sans texte autour, avec les clés km (kilométrage si mentionné/visible, sinon null), type (l'un de ces types si ça correspond : ${types.join(", ")} — sinon une courte description, sinon null), note (détails complémentaires, sinon null), cost (coût total en euros si mentionné, sinon null).`}
+        promptText={`Analyse cette photo (facture d'atelier, écran de compteur) ou cette transcription vocale en français d'une intervention d'entretien moto. Réponds uniquement en JSON strict, sans texte autour, avec les clés km (kilométrage si mentionné/visible, sinon null), type (reprends EXACTEMENT un de ces types si le sens correspond, même reformulé/synonyme : ${knownTypes.join(", ")} — sinon une courte description, sinon null), note (détails complémentaires, sinon null), cost (coût total en euros si mentionné, sinon null).`}
         onExtract={(r) => {
           setForm((f) => ({
             ...f,
             km: r.km != null ? String(r.km) : f.km,
-            type: r.type || f.type,
+            type: r.type ? normalizeType(r.type, knownTypes) : f.type,
             note: r.note || f.note,
             cost: r.cost != null ? String(r.cost) : f.cost,
           }));
         }}
       />
       <Field label="Type d'entretien">
-        <select style={inputStyle} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-          {types.map((t) => (
-            <option key={t} value={t}>{t}</option>
+        <input
+          style={inputStyle}
+          type="text"
+          list="maint-types"
+          value={form.type}
+          onChange={(e) => setForm({ ...form, type: e.target.value })}
+        />
+        <datalist id="maint-types">
+          {visibleTypes.map((t) => (
+            <option key={t} value={t} />
           ))}
-          <option value="Autre">Autre</option>
-        </select>
+        </datalist>
       </Field>
       <Field label="Date">
         <input style={inputStyle} type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
@@ -1045,12 +1126,15 @@ function QuickAddModal({ apiKey, rules, defaultKm, onClose, onAddFuel, onAddMain
   const fileRef = useRef(null);
 
   const ruleNames = rules.map((r) => r.name);
+  const pickerRuleNames = rules.filter((r) => !r.hideFromPicker).map((r) => r.name);
+  const knownTypes = [...ruleNames, ...EXTRA_KNOWN_TYPES.filter((t) => !ruleNames.includes(t))];
+  const visibleTypes = [...pickerRuleNames, ...EXTRA_KNOWN_TYPES.filter((t) => !pickerRuleNames.includes(t))];
   const classifyPrompt = `Tu es un assistant qui classe une dictée ou une photo en français sur le suivi d'une moto (plein d'essence ou entretien). Réponds uniquement en JSON strict, sans texte autour, avec les clés :
 kind ("fuel" ou "maintenance" selon le sujet),
 km (nombre, kilométrage au compteur si mentionné/visible, sinon null),
 liters (nombre, uniquement pertinent si kind="fuel", sinon null),
 price (nombre, prix total en euros si mentionné, sinon null),
-type (chaîne, uniquement pertinent si kind="maintenance" — utilise un de ces types s'il correspond : ${ruleNames.join(", ")} — sinon une courte description, sinon null),
+type (chaîne, uniquement pertinent si kind="maintenance" — reprends EXACTEMENT un de ces types si le sens correspond, même reformulé/synonyme : ${knownTypes.join(", ")} — par exemple "gonflage" ou "vérifier la pression" correspondent à "Pression des pneus" ; sinon une courte description, sinon null),
 note (chaîne, détails complémentaires, sinon null),
 date (chaîne au format AAAA-MM-JJ si une date est mentionnée, sinon null).
 Un plein d'essence évoque des litres ou de l'essence. Un entretien évoque une intervention mécanique (vidange, chaîne, plaquettes, pneus, filtre, bougies, liquide, pression...).`;
@@ -1063,7 +1147,7 @@ Un plein d'essence évoque des litres ou de l'essence. Un entretien évoque une 
       km: r.km != null ? String(r.km) : String(defaultKm || ""),
       liters: r.liters != null ? String(r.liters) : "",
       price: r.price != null ? String(r.price) : "",
-      type: r.type || ruleNames[0] || "",
+      type: r.type ? normalizeType(r.type, knownTypes) : pickerRuleNames[0] || "",
       note: r.note || "",
       cost: r.price != null && detectedKind === "maintenance" ? String(r.price) : "",
     });
@@ -1215,12 +1299,18 @@ Un plein d'essence évoque des litres ou de l'essence. Un entretien évoque une 
           ) : (
             <>
               <Field label="Type d'entretien">
-                <select style={inputStyle} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                  {ruleNames.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                <input
+                  style={inputStyle}
+                  type="text"
+                  list="quickadd-maint-types"
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                />
+                <datalist id="quickadd-maint-types">
+                  {visibleTypes.map((t) => (
+                    <option key={t} value={t} />
                   ))}
-                  <option value="Autre">Autre</option>
-                </select>
+                </datalist>
               </Field>
               <Field label="Note — optionnel">
                 <input style={inputStyle} type="text" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
