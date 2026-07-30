@@ -416,7 +416,8 @@ function LoginScreen() {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (e) {
-      setError("Connexion annulée ou échouée, réessaie");
+      console.error("Erreur de connexion Firebase :", e);
+      setError(`${e.code || "Erreur"} — ${e.message || "réessaie"}`);
     }
   };
   return (
