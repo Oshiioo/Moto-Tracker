@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Fuel, Wrench, Gauge, Settings, Plus, Trash2, X, AlertTriangle, CheckCircle2, Clock, Camera, Mic, Loader2 } from "lucide-react";
+import { Fuel, Wrench, Gauge, Settings, Plus, Trash2, X, AlertTriangle, CheckCircle2, Clock, Camera, Mic, Loader2, LogOut, Bike } from "lucide-react";
+import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { auth, googleProvider, db } from "./firebase";
 
 const STORAGE_KEY = "moto-tracker-data";
 const GEMINI_MODEL = "gemini-3.6-flash";
@@ -205,6 +216,241 @@ function migrateData(loaded) {
 }
 
 export default function MotoTracker() {
+  const [user, setUser] = useState(undefined); // undefined = chargement, null = déconnecté
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
+    return unsubscribe;
+  }, []);
+
+  if (user === undefined) {
+    return (
+      <div style={{ background: PALETTE.bg, minHeight: "100vh" }} className="flex items-center justify-center">
+        <div style={{ color: PALETTE.steel, fontFamily: FONT_MONO }}>Chargement…</div>
+      </div>
+    );
+  }
+
+  if (user === null) {
+    return <LoginScreen />;
+  }
+
+  return <GarageGate user={user} />;
+}
+
+// Récupère la liste des motos de l'utilisateur, gère la création de la première
+// moto (avec migration des données locales existantes si présentes) et le
+// choix de la moto active.
+function GarageGate({ user }) {
+  const [vehicles, setVehicles] = useState(null); // null = chargement
+  const [activeVehicleId, setActiveVehicleId] = useState(null);
+  const [showGarage, setShowGarage] = useState(false);
+  const activeKey = `moto-tracker-active-vehicle-${user.uid}`;
+
+  const refreshVehicles = useCallback(async () => {
+    const snap = await getDocs(collection(db, "users", user.uid, "vehicles"));
+    const list = snap.docs.map((d) => ({ id: d.id, name: d.data().vehicle?.name || "Ma moto", currentKm: d.data().vehicle?.currentKm || 0 }));
+    setVehicles(list);
+    return list;
+  }, [user.uid]);
+
+  useEffect(() => {
+    (async () => {
+      let list = await refreshVehicles();
+
+      if (list.length === 0) {
+        // Première connexion : migre les données locales existantes si présentes,
+        // sinon crée une moto vierge.
+        let initial = DEFAULT_DATA;
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) initial = migrateData(JSON.parse(raw));
+        } catch (e) {
+          /* ignore, on repart de DEFAULT_DATA */
+        }
+        const newId = uid();
+        const clean = JSON.parse(JSON.stringify(initial));
+        await setDoc(doc(db, "users", user.uid, "vehicles", newId), { ...clean, createdAt: serverTimestamp() });
+        list = await refreshVehicles();
+      }
+
+      const savedActive = localStorage.getItem(activeKey);
+      const validActive = list.find((v) => v.id === savedActive);
+      setActiveVehicleId(validActive ? savedActive : list[0]?.id || null);
+    })();
+  }, [refreshVehicles, activeKey]);
+
+  const onSwitchVehicle = (id) => {
+    setActiveVehicleId(id);
+    localStorage.setItem(activeKey, id);
+    setShowGarage(false);
+  };
+
+  const onAddVehicle = async (name) => {
+    const newId = uid();
+    await setDoc(doc(db, "users", user.uid, "vehicles", newId), {
+      vehicle: { name: name || "Nouvelle moto", currentKm: 0 },
+      fuel: [],
+      maintenance: [],
+      rules: DEFAULT_RULES,
+      createdAt: serverTimestamp(),
+    });
+    await refreshVehicles();
+    onSwitchVehicle(newId);
+  };
+
+  const onDeleteVehicle = async (id) => {
+    await deleteDoc(doc(db, "users", user.uid, "vehicles", id));
+    const list = await refreshVehicles();
+    if (activeVehicleId === id) {
+      onSwitchVehicle(list[0]?.id || null);
+    }
+  };
+
+  const onSignOut = () => signOut(auth);
+
+  if (!vehicles || !activeVehicleId) {
+    return (
+      <div style={{ background: PALETTE.bg, minHeight: "100vh" }} className="flex items-center justify-center">
+        <div style={{ color: PALETTE.steel, fontFamily: FONT_MONO }}>Chargement du garage…</div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <MotoTrackerApp
+        key={activeVehicleId}
+        user={user}
+        vehicleId={activeVehicleId}
+        vehicles={vehicles}
+        onOpenGarage={() => setShowGarage(true)}
+        onRefreshVehicles={refreshVehicles}
+      />
+      {showGarage && (
+        <GarageModal
+          vehicles={vehicles}
+          activeVehicleId={activeVehicleId}
+          onClose={() => setShowGarage(false)}
+          onSwitch={onSwitchVehicle}
+          onAdd={onAddVehicle}
+          onDelete={onDeleteVehicle}
+          onSignOut={onSignOut}
+          userEmail={user.email}
+        />
+      )}
+    </>
+  );
+}
+
+function GarageModal({ vehicles, activeVehicleId, onClose, onSwitch, onAdd, onDelete, onSignOut, userEmail }) {
+  const [newName, setNewName] = useState("");
+  return (
+    <Modal title="Mon garage" onClose={onClose}>
+      <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-3">
+        Connecté en tant que {userEmail}
+      </div>
+      <div className="space-y-2 mb-4">
+        {vehicles.map((v) => (
+          <div
+            key={v.id}
+            style={{
+              background: PALETTE.surface,
+              border: `1px solid ${v.id === activeVehicleId ? PALETTE.amber : PALETTE.hairline}`,
+              borderRadius: 10,
+            }}
+            className="p-3 flex items-center justify-between"
+          >
+            <button onClick={() => onSwitch(v.id)} className="text-left flex-1">
+              <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: PALETTE.text }}>{v.name}</div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>{fmtKm(v.currentKm)} km</div>
+            </button>
+            {vehicles.length > 1 && (
+              <button
+                onClick={() => {
+                  if (confirm(`Supprimer "${v.name}" et tout son historique ?`)) onDelete(v.id);
+                }}
+                style={{ color: PALETTE.steelDim }}
+                className="ml-2"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2 mb-6">
+        <input
+          style={{ ...inputStyle, flex: 1 }}
+          type="text"
+          placeholder="Nom de la nouvelle moto"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+        />
+        <button
+          onClick={() => {
+            if (!newName.trim()) return;
+            onAdd(newName.trim());
+            setNewName("");
+          }}
+          style={{ background: PALETTE.amber, color: "#1B1A17", fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, borderRadius: 8, padding: "0 16px" }}
+        >
+          Ajouter
+        </button>
+      </div>
+      <button
+        onClick={onSignOut}
+        className="flex items-center gap-2"
+        style={{ color: PALETTE.danger, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}
+      >
+        <LogOut size={16} /> Se déconnecter
+      </button>
+    </Modal>
+  );
+}
+
+function LoginScreen() {
+  const [error, setError] = useState("");
+  const onLogin = async () => {
+    setError("");
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (e) {
+      setError("Connexion annulée ou échouée, réessaie");
+    }
+  };
+  return (
+    <div style={{ background: PALETTE.bg, minHeight: "100vh" }} className="flex flex-col items-center justify-center px-6">
+      <div style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 600, color: PALETTE.text }} className="mb-2">
+        Carnet Moto
+      </div>
+      <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }} className="mb-8 text-center">
+        Connecte-toi pour accéder à ton garage
+      </div>
+      <button
+        onClick={onLogin}
+        style={{
+          background: PALETTE.amber,
+          color: "#1B1A17",
+          fontFamily: FONT_BODY,
+          fontWeight: 600,
+          fontSize: 14,
+          borderRadius: 8,
+          padding: "12px 24px",
+        }}
+      >
+        Se connecter avec Google
+      </button>
+      {error && (
+        <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.danger }} className="mt-3">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehicles }) {
   const [data, setData] = useState(null);
   const [tab, setTab] = useState("dashboard");
   const [ready, setReady] = useState(false);
@@ -214,34 +460,41 @@ export default function MotoTracker() {
   const [editingVehicle, setEditingVehicle] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
+  const vehicleRef = doc(db, "users", user.uid, "vehicles", vehicleId);
+
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const loaded = raw ? JSON.parse(raw) : DEFAULT_DATA;
-      const migrated = migrateData(loaded);
-      setData(migrated);
-      if (migrated !== loaded) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+    (async () => {
+      setReady(false);
+      try {
+        const snap = await getDoc(vehicleRef);
+        const loaded = snap.exists() ? snap.data() : DEFAULT_DATA;
+        const migrated = migrateData(loaded);
+        setData(migrated);
+        if (migrated !== loaded) {
+          await setDoc(vehicleRef, migrated, { merge: true });
+        }
+      } catch (e) {
+        console.error("Erreur de chargement", e);
+        setData(DEFAULT_DATA);
+      } finally {
+        setReady(true);
       }
-    } catch (e) {
-      setData(DEFAULT_DATA);
-    } finally {
-      setReady(true);
-    }
+    })();
     // Raccourci d'écran d'accueil : ?quickadd=1 ouvre directement la dictée
     if (new URLSearchParams(window.location.search).get("quickadd") === "1") {
       setShowQuickAdd(true);
     }
-  }, []);
+  }, [vehicleId]);
 
-  const persist = useCallback((next) => {
-    setData(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch (e) {
-      console.error("Erreur de sauvegarde", e);
-    }
-  }, []);
+  const persist = useCallback(
+    (next) => {
+      setData(next);
+      const clean = JSON.parse(JSON.stringify(next)); // retire les clés undefined, incompatibles avec Firestore
+      setDoc(vehicleRef, clean, { merge: false }).catch((e) => console.error("Erreur de sauvegarde", e));
+      onRefreshVehicles();
+    },
+    [vehicleId]
+  );
 
   const updateVehicle = (patch) => persist({ ...data, vehicle: { ...data.vehicle, ...patch } });
 
@@ -355,7 +608,7 @@ export default function MotoTracker() {
   return (
     <div style={{ background: PALETTE.bg, minHeight: "100vh", fontFamily: FONT_BODY, color: PALETTE.text }}>
       <FontLoader />
-      <Header vehicle={data.vehicle} onEdit={() => setEditingVehicle(true)} />
+      <Header vehicle={data.vehicle} onEdit={() => setEditingVehicle(true)} onOpenGarage={onOpenGarage} vehicleCount={vehicles.length} />
 
       <main className="max-w-md mx-auto px-4 pb-28 pt-4">
         {tab === "dashboard" && (
@@ -393,6 +646,7 @@ export default function MotoTracker() {
             onAdd={() => setShowRuleForm(true)}
             onDelete={(id) => deleteItem("rules", id)}
             apiKeyConfigured={!!GEMINI_API_KEY}
+            user={user}
           />
         )}
       </main>
@@ -503,20 +757,50 @@ function FontLoader() {
 
 /* ---------- Header ---------- */
 
-function Header({ vehicle, onEdit }) {
+function Header({ vehicle, onEdit, onOpenGarage, vehicleCount }) {
   return (
     <header
       style={{ borderBottom: `1px solid ${PALETTE.hairline}`, background: PALETTE.surface }}
       className="px-4 py-4"
     >
       <div className="max-w-md mx-auto flex items-center justify-between">
-        <div>
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, letterSpacing: "0.12em", color: PALETTE.amber }}>
-            CARNET D'ENTRETIEN
-          </div>
-          <button onClick={onEdit} className="text-left" style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: PALETTE.text }}>
-            {vehicle.name}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onOpenGarage}
+            aria-label="Mon garage"
+            style={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8, padding: 8, position: "relative" }}
+          >
+            <Bike size={18} color={PALETTE.amberSoft} />
+            {vehicleCount > 1 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: -4,
+                  right: -4,
+                  background: PALETTE.amber,
+                  color: "#1B1A17",
+                  borderRadius: 999,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  width: 15,
+                  height: 15,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {vehicleCount}
+              </span>
+            )}
           </button>
+          <div>
+            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, letterSpacing: "0.12em", color: PALETTE.amber }}>
+              CARNET D'ENTRETIEN
+            </div>
+            <button onClick={onEdit} className="text-left" style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: PALETTE.text }}>
+              {vehicle.name}
+            </button>
+          </div>
         </div>
         <div className="text-right">
           <div style={{ fontFamily: FONT_MONO, fontSize: 26, fontWeight: 700, color: PALETTE.text, letterSpacing: "0.02em" }}>
