@@ -358,7 +358,7 @@ function GarageModal({ vehicles, activeVehicleId, onClose, onSwitch, onAdd, onDe
       <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-3">
         Connecté en tant que {userEmail}
       </div>
-      <div className="space-y-2 mb-4">
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
         {vehicles.map((v) => (
           <div
             key={v.id}
@@ -366,20 +366,25 @@ function GarageModal({ vehicles, activeVehicleId, onClose, onSwitch, onAdd, onDe
               background: PALETTE.surface,
               border: `1px solid ${v.id === activeVehicleId ? PALETTE.amber : PALETTE.hairline}`,
               borderRadius: 10,
+              padding: 12,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
-            className="p-3 flex items-center justify-between"
           >
-            <button onClick={() => onSwitch(v.id)} className="text-left flex-1">
-              <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: PALETTE.text }}>{v.name}</div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>{fmtKm(v.currentKm)} km</div>
+            <button onClick={() => onSwitch(v.id)} style={{ textAlign: "left", flex: 1, background: "transparent", border: "none" }}>
+              <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: PALETTE.text }}>
+                {v.name} {v.id === activeVehicleId && <span style={{ color: PALETTE.amber, fontSize: 11 }}>· active</span>}
+              </div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted, marginTop: 2 }}>{fmtKm(v.currentKm)} km</div>
             </button>
             {vehicles.length > 1 && (
               <button
                 onClick={() => {
                   if (confirm(`Supprimer "${v.name}" et tout son historique ?`)) onDelete(v.id);
                 }}
-                style={{ color: PALETTE.steelDim }}
-                className="ml-2"
+                aria-label={`Supprimer ${v.name}`}
+                style={{ color: PALETTE.steelDim, background: "transparent", border: "none", marginLeft: 8, padding: 4 }}
               >
                 <Trash2 size={16} />
               </button>
@@ -387,7 +392,7 @@ function GarageModal({ vehicles, activeVehicleId, onClose, onSwitch, onAdd, onDe
           </div>
         ))}
       </div>
-      <div className="flex gap-2 mb-6">
+      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
         <input
           style={{ ...inputStyle, flex: 1 }}
           type="text"
@@ -408,8 +413,7 @@ function GarageModal({ vehicles, activeVehicleId, onClose, onSwitch, onAdd, onDe
       </div>
       <button
         onClick={onSignOut}
-        className="flex items-center gap-2"
-        style={{ color: PALETTE.danger, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}
+        style={{ display: "flex", alignItems: "center", gap: 8, background: "transparent", border: "none", color: PALETTE.danger, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}
       >
         <LogOut size={16} /> Se déconnecter
       </button>
@@ -771,6 +775,7 @@ function FontLoader() {
       @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap');
       * { box-sizing: border-box; }
       html, body, #root { height: 100%; margin: 0; }
+      button { background: none; border: none; font: inherit; color: inherit; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; }
       input, select { outline: none; }
       input:focus, select:focus { border-color: ${PALETTE.amber} !important; }
       ::placeholder { color: ${PALETTE.steelDim}; }
@@ -820,7 +825,7 @@ function Header({ vehicle, onEdit, onOpenGarage, vehicleCount }) {
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, letterSpacing: "0.12em", color: PALETTE.amber }}>
               CARNET D'ENTRETIEN
             </div>
-            <button onClick={onEdit} className="text-left" style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: PALETTE.text }}>
+            <button onClick={onEdit} style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: PALETTE.text }}>
               {vehicle.name}
             </button>
           </div>
@@ -1165,11 +1170,32 @@ function TabBar({ tab, setTab }) {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.6)",
+      }}
+      onClick={onClose}
+    >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ background: PALETTE.surfaceRaised, borderRadius: "14px 14px 0 0", maxWidth: 420 }}
-        className="w-full sm:rounded-2xl p-5 max-h-[85vh] overflow-y-auto"
+        style={{
+          background: PALETTE.surfaceRaised,
+          borderRadius: "14px 14px 0 0",
+          maxWidth: 420,
+          width: "100%",
+          padding: 20,
+          maxHeight: "85vh",
+          overflowY: "auto",
+        }}
       >
         <div className="flex items-center justify-between mb-4">
           <div style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 600, color: PALETTE.text }}>{title}</div>
