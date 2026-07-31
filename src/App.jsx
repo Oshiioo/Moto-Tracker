@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Fuel, Wrench, Gauge, Settings, Plus, Trash2, X, AlertTriangle, CheckCircle2, Clock, Camera, Mic, Loader2, LogOut, Bike } from "lucide-react";
+import { HashRouter, useNavigate, useLocation } from "react-router-dom";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import {
   collection,
@@ -235,7 +236,11 @@ export default function MotoTracker() {
     return <LoginScreen />;
   }
 
-  return <GarageGate user={user} />;
+  return (
+    <HashRouter>
+      <GarageGate user={user} />
+    </HashRouter>
+  );
 }
 
 // Récupère la liste des motos de l'utilisateur, gère la création de la première
@@ -324,7 +329,10 @@ function GarageGate({ user }) {
         user={user}
         vehicleId={activeVehicleId}
         vehicles={vehicles}
-        onOpenGarage={() => setShowGarage(true)}
+        onOpenGarage={() => {
+          console.log("[debug] onOpenGarage appelé, showGarage passe à true");
+          setShowGarage(true);
+        }}
         onRefreshVehicles={refreshVehicles}
       />
       {showGarage && (
@@ -453,7 +461,10 @@ function LoginScreen() {
 
 function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehicles }) {
   const [data, setData] = useState(null);
-  const [tab, setTab] = useState("dashboard");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const tab = location.pathname === "/" || location.pathname === "" ? "dashboard" : location.pathname.replace("/", "");
+  const setTab = (t) => navigate(t === "dashboard" ? "/" : `/${t}`);
   const [ready, setReady] = useState(false);
   const [showFuelForm, setShowFuelForm] = useState(false);
   const [showMaintForm, setShowMaintForm] = useState(false);
