@@ -944,7 +944,7 @@ function FuelTab({ entries, consumption, onAdd, onDelete }) {
       ) : (
         <div className="space-y-2">
           {entries.map((e) => (
-            <Card key={e.id} onDelete={() => onDelete(e.id)}>
+            <Card key={e.id} onDelete={() => onDelete(e.id)} confirmLabel={`ce plein du ${fmtDate(e.date)}`}>
               <div className="flex justify-between items-start">
                 <div>
                   <div style={{ fontFamily: FONT_MONO, fontSize: 16, color: PALETTE.text }}>{fmtKm(e.km)} km</div>
@@ -1008,7 +1008,7 @@ function MaintenanceTab({ statuses, history, onAdd, onDelete }) {
         ) : (
           <div className="space-y-2">
             {history.map((m) => (
-              <Card key={m.id} onDelete={() => onDelete(m.id)}>
+              <Card key={m.id} onDelete={() => onDelete(m.id)} confirmLabel={`« ${m.type} » du ${fmtDate(m.date)}`}>
                 <div className="flex justify-between items-start">
                   <div>
                     <div style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: PALETTE.text }}>{m.type}</div>
@@ -1074,7 +1074,7 @@ function SettingsTab({ rules, onAdd, onDelete, apiKeyConfigured }) {
         <SectionHeader title="Types d'entretien suivis" onAdd={onAdd} addLabel="Nouveau type" />
         <div className="space-y-2">
           {rules.map((r) => (
-            <Card key={r.id} onDelete={() => onDelete(r.id)}>
+            <Card key={r.id} onDelete={() => onDelete(r.id)} confirmLabel={`le suivi « ${r.name} » (et son rappel associé)`}>
               <div className="flex justify-between items-center">
                 <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{r.name}</span>
                 <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
@@ -1108,12 +1108,14 @@ function SectionHeader({ title, onAdd, addLabel }) {
   );
 }
 
-function Card({ children, onDelete }) {
+function Card({ children, onDelete, confirmLabel = "cette entrée" }) {
   return (
     <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-3 relative group">
       {children}
       <button
-        onClick={onDelete}
+        onClick={() => {
+          if (confirm(`Supprimer ${confirmLabel} ? Cette action est définitive.`)) onDelete();
+        }}
         aria-label="Supprimer"
         style={{ color: PALETTE.steelDim }}
         className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
