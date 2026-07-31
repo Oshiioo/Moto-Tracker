@@ -226,7 +226,7 @@ export default function MotoTracker() {
 
   if (user === undefined) {
     return (
-      <div style={{ background: PALETTE.bg, minHeight: "100vh" }} className="flex items-center justify-center">
+      <div style={{ background: PALETTE.bg, height: "100dvh" }} className="flex items-center justify-center">
         <div style={{ color: PALETTE.steel, fontFamily: FONT_MONO }}>Chargement…</div>
       </div>
     );
@@ -316,7 +316,7 @@ function GarageGate({ user }) {
 
   if (!vehicles || !activeVehicleId) {
     return (
-      <div style={{ background: PALETTE.bg, minHeight: "100vh" }} className="flex items-center justify-center">
+      <div style={{ background: PALETTE.bg, height: "100dvh" }} className="flex items-center justify-center">
         <div style={{ color: PALETTE.steel, fontFamily: FONT_MONO }}>Chargement du garage…</div>
       </div>
     );
@@ -429,7 +429,7 @@ function LoginScreen() {
     }
   };
   return (
-    <div style={{ background: PALETTE.bg, minHeight: "100vh" }} className="flex flex-col items-center justify-center px-6">
+    <div style={{ background: PALETTE.bg, height: "100dvh" }} className="flex flex-col items-center justify-center px-6">
       <div style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 600, color: PALETTE.text }} className="mb-2">
         Carnet Moto
       </div>
@@ -611,18 +611,28 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehi
 
   if (!ready || !data) {
     return (
-      <div style={{ background: PALETTE.bg, minHeight: "100vh" }} className="flex items-center justify-center">
+      <div style={{ background: PALETTE.bg, height: "100dvh" }} className="flex items-center justify-center">
         <div style={{ color: PALETTE.steel, fontFamily: FONT_MONO }}>Chargement…</div>
       </div>
     );
   }
 
   return (
-    <div style={{ background: PALETTE.bg, minHeight: "100vh", fontFamily: FONT_BODY, color: PALETTE.text }}>
+    <div
+      style={{
+        background: PALETTE.bg,
+        height: "100dvh",
+        fontFamily: FONT_BODY,
+        color: PALETTE.text,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
       <FontLoader />
       <Header vehicle={data.vehicle} onEdit={() => setEditingVehicle(true)} onOpenGarage={onOpenGarage} vehicleCount={vehicles.length} />
 
-      <main className="max-w-md mx-auto px-4 pb-28 pt-4">
+      <main className="max-w-md mx-auto px-4 pt-4 w-full" style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
         {tab === "dashboard" && (
           <Dashboard
             vehicle={data.vehicle}
@@ -661,6 +671,7 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehi
             user={user}
           />
         )}
+        <div style={{ height: 24 }} />
       </main>
 
       <TabBar tab={tab} setTab={setTab} />
@@ -759,7 +770,7 @@ function FontLoader() {
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap');
       * { box-sizing: border-box; }
-      body { margin: 0; }
+      html, body, #root { height: 100%; margin: 0; }
       input, select { outline: none; }
       input:focus, select:focus { border-color: ${PALETTE.amber} !important; }
       ::placeholder { color: ${PALETTE.steelDim}; }
@@ -1130,8 +1141,7 @@ function TabBar({ tab, setTab }) {
   ];
   return (
     <nav
-      style={{ background: PALETTE.surface, borderTop: `1px solid ${PALETTE.hairline}` }}
-      className="fixed bottom-0 left-0 right-0"
+      style={{ background: PALETTE.surface, borderTop: `1px solid ${PALETTE.hairline}`, flexShrink: 0 }}
     >
       <div className="max-w-md mx-auto grid grid-cols-4">
         {items.map((it) => {
