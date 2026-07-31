@@ -216,6 +216,16 @@ function migrateData(loaded) {
   return next;
 }
 
+function AppShell({ children }) {
+  return (
+    <div style={{ minHeight: "100dvh", background: "#100F0D", display: "flex", justifyContent: "center" }}>
+      <div style={{ width: "100%", maxWidth: 480, position: "relative", boxShadow: "0 0 60px rgba(0,0,0,0.5)" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function MotoTracker() {
   const [user, setUser] = useState(undefined); // undefined = chargement, null = déconnecté
 
@@ -226,20 +236,28 @@ export default function MotoTracker() {
 
   if (user === undefined) {
     return (
-      <div style={{ background: PALETTE.bg, height: "100dvh" }} className="flex items-center justify-center">
-        <div style={{ color: PALETTE.steel, fontFamily: FONT_MONO }}>Chargement…</div>
-      </div>
+      <AppShell>
+        <div style={{ background: PALETTE.bg, height: "100dvh" }} className="flex items-center justify-center">
+          <div style={{ color: PALETTE.steel, fontFamily: FONT_MONO }}>Chargement…</div>
+        </div>
+      </AppShell>
     );
   }
 
   if (user === null) {
-    return <LoginScreen />;
+    return (
+      <AppShell>
+        <LoginScreen />
+      </AppShell>
+    );
   }
 
   return (
-    <HashRouter>
-      <GarageGate user={user} />
-    </HashRouter>
+    <AppShell>
+      <HashRouter>
+        <GarageGate user={user} />
+      </HashRouter>
+    </AppShell>
   );
 }
 
@@ -1179,9 +1197,10 @@ function Modal({ title, onClose, children }) {
         bottom: 0,
         zIndex: 9999,
         display: "flex",
-        alignItems: "flex-end",
+        alignItems: "center",
         justifyContent: "center",
-        background: "rgba(0,0,0,0.6)",
+        padding: 16,
+        background: "rgba(0,0,0,0.7)",
       }}
       onClick={onClose}
     >
@@ -1189,11 +1208,11 @@ function Modal({ title, onClose, children }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           background: PALETTE.surfaceRaised,
-          borderRadius: "14px 14px 0 0",
+          borderRadius: 16,
           maxWidth: 420,
           width: "100%",
           padding: 20,
-          maxHeight: "85vh",
+          maxHeight: "85dvh",
           overflowY: "auto",
         }}
       >
