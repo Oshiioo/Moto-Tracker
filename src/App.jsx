@@ -648,7 +648,10 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehi
       <FontLoader />
       <Header vehicle={data.vehicle} onEdit={() => setEditingVehicle(true)} onOpenGarage={onOpenGarage} vehicleCount={vehicles.length} />
 
-      <main className="px-4 pt-4 w-full" style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+      <main
+        className="w-full"
+        style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", padding: "16px 20px 0" }}
+      >
         {tab === "dashboard" && (
           <Dashboard
             vehicle={data.vehicle}
@@ -761,6 +764,8 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehi
 
 /* ---------- Design tokens ---------- */
 
+const CONTENT_MAX_WIDTH = 600;
+
 const PALETTE = {
   bg: "#1B1A17",
   surface: "#252320",
@@ -803,9 +808,9 @@ function Header({ vehicle, onEdit, onOpenGarage, vehicleCount }) {
   return (
     <header
       style={{ borderBottom: `1px solid ${PALETTE.hairline}`, background: PALETTE.surface }}
-      className="px-4 py-4"
+      className="py-4"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", padding: "0 20px" }}>
         <div className="flex items-center gap-3">
           <button
             onClick={onOpenGarage}
@@ -1164,7 +1169,7 @@ function TabBar({ tab, setTab }) {
     <nav
       style={{ background: PALETTE.surface, borderTop: `1px solid ${PALETTE.hairline}`, flexShrink: 0 }}
     >
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-4" style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", padding: "0 20px" }}>
         {items.map((it) => {
           const active = tab === it.id;
           const Icon = it.icon;
