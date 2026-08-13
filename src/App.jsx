@@ -217,13 +217,7 @@ function migrateData(loaded) {
 }
 
 function AppShell({ children }) {
-  return (
-    <div style={{ minHeight: "100dvh", background: "#100F0D", display: "flex", justifyContent: "center" }}>
-      <div style={{ width: "100%", maxWidth: 480, position: "relative", boxShadow: "0 0 60px rgba(0,0,0,0.5)" }}>
-        {children}
-      </div>
-    </div>
-  );
+  return <div style={{ minHeight: "100dvh", width: "100%" }}>{children}</div>;
 }
 
 export default function MotoTracker() {
@@ -654,7 +648,7 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehi
       <FontLoader />
       <Header vehicle={data.vehicle} onEdit={() => setEditingVehicle(true)} onOpenGarage={onOpenGarage} vehicleCount={vehicles.length} />
 
-      <main className="max-w-md mx-auto px-4 pt-4 w-full" style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
+      <main className="px-4 pt-4 w-full" style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch" }}>
         {tab === "dashboard" && (
           <Dashboard
             vehicle={data.vehicle}
@@ -811,7 +805,7 @@ function Header({ vehicle, onEdit, onOpenGarage, vehicleCount }) {
       style={{ borderBottom: `1px solid ${PALETTE.hairline}`, background: PALETTE.surface }}
       className="px-4 py-4"
     >
-      <div className="max-w-md mx-auto flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={onOpenGarage}
@@ -1170,7 +1164,7 @@ function TabBar({ tab, setTab }) {
     <nav
       style={{ background: PALETTE.surface, borderTop: `1px solid ${PALETTE.hairline}`, flexShrink: 0 }}
     >
-      <div className="max-w-md mx-auto grid grid-cols-4">
+      <div className="grid grid-cols-4">
         {items.map((it) => {
           const active = tab === it.id;
           const Icon = it.icon;
