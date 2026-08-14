@@ -521,8 +521,16 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVehicles, onSwitch
       <Header vehicle={data.vehicle} />
 
       <main
-        className="w-full"
-        style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", padding: "16px 20px 0" }}
+        style={{
+          width: "100%",
+          flex: 1,
+          overflowY: "auto",
+          WebkitOverflowScrolling: "touch",
+          maxWidth: CONTENT_MAX_WIDTH,
+          margin: "0 auto",
+          padding: "16px 20px 0",
+          boxSizing: "border-box",
+        }}
       >
         {tab === "dashboard" && (
           <Dashboard
@@ -686,7 +694,18 @@ function Header({ vehicle }) {
       style={{ borderBottom: `1px solid ${PALETTE.hairline}`, background: PALETTE.surface }}
       className="py-4"
     >
-      <div className="flex items-center justify-between" style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", padding: "0 20px" }}>
+      <div
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          maxWidth: CONTENT_MAX_WIDTH,
+          margin: "0 auto",
+          padding: "0 20px",
+          boxSizing: "border-box",
+        }}
+      >
         <div>
           <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, letterSpacing: "0.12em", color: PALETTE.amber }}>
             CARNET D'ENTRETIEN
@@ -1150,7 +1169,17 @@ function TabBar({ tab, setTab }) {
     <nav
       style={{ background: PALETTE.surface, borderTop: `1px solid ${PALETTE.hairline}`, flexShrink: 0 }}
     >
-      <div className="grid grid-cols-4" style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", padding: "0 20px" }}>
+      <div
+        style={{
+          width: "100%",
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          maxWidth: CONTENT_MAX_WIDTH,
+          margin: "0 auto",
+          padding: "0 20px",
+          boxSizing: "border-box",
+        }}
+      >
         {items.map((it) => {
           const active = tab === it.id;
           const Icon = it.icon;
