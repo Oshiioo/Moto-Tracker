@@ -261,7 +261,6 @@ export default function MotoTracker() {
 function GarageGate({ user }) {
   const [vehicles, setVehicles] = useState(null); // null = chargement
   const [activeVehicleId, setActiveVehicleId] = useState(null);
-  const [showGarage, setShowGarage] = useState(false);
   const activeKey = `moto-tracker-active-vehicle-${user.uid}`;
 
   const refreshVehicles = useCallback(async () => {
@@ -300,7 +299,6 @@ function GarageGate({ user }) {
   const onSwitchVehicle = (id) => {
     setActiveVehicleId(id);
     localStorage.setItem(activeKey, id);
-    setShowGarage(false);
   };
 
   const onAddVehicle = async (name) => {
@@ -335,147 +333,21 @@ function GarageGate({ user }) {
   }
 
   return (
-    <>
-      <MotoTrackerApp
-        key={activeVehicleId}
-        user={user}
-        vehicleId={activeVehicleId}
-        vehicles={vehicles}
-        onOpenGarage={() => {
-          console.log("[debug] onOpenGarage appelé, showGarage passe à true");
-          setShowGarage(true);
-        }}
-        onRefreshVehicles={refreshVehicles}
-      />
-      {showGarage && (
-        <GarageModal
-          vehicles={vehicles}
-          activeVehicleId={activeVehicleId}
-          onClose={() => setShowGarage(false)}
-          onSwitch={onSwitchVehicle}
-          onAdd={onAddVehicle}
-          onDelete={onDeleteVehicle}
-          onSignOut={onSignOut}
-          userEmail={user.email}
-        />
-      )}
-    </>
+    <MotoTrackerApp
+      key={activeVehicleId}
+      user={user}
+      vehicleId={activeVehicleId}
+      vehicles={vehicles}
+      onRefreshVehicles={refreshVehicles}
+      onSwitchVehicle={onSwitchVehicle}
+      onAddVehicle={onAddVehicle}
+      onDeleteVehicle={onDeleteVehicle}
+      onSignOut={onSignOut}
+    />
   );
 }
 
-function GarageModal({ vehicles, activeVehicleId, onClose, onSwitch, onAdd, onDelete, onSignOut, userEmail }) {
-  const [newName, setNewName] = useState("");
-  return (
-    <Modal title="Mon garage" onClose={onClose}>
-      <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-3">
-        Connecté en tant que {userEmail}
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-        {vehicles.map((v) => (
-          <div
-            key={v.id}
-            style={{
-              background: PALETTE.surface,
-              border: `1px solid ${v.id === activeVehicleId ? PALETTE.amber : PALETTE.hairline}`,
-              borderRadius: 10,
-              padding: 12,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <button onClick={() => onSwitch(v.id)} style={{ textAlign: "left", flex: 1, background: "transparent", border: "none" }}>
-              <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: PALETTE.text }}>
-                {v.name} {v.id === activeVehicleId && <span style={{ color: PALETTE.amber, fontSize: 11 }}>· active</span>}
-              </div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted, marginTop: 2 }}>{fmtKm(v.currentKm)} km</div>
-            </button>
-            {vehicles.length > 1 && (
-              <button
-                onClick={() => {
-                  if (confirm(`Supprimer "${v.name}" et tout son historique ?`)) onDelete(v.id);
-                }}
-                aria-label={`Supprimer ${v.name}`}
-                style={{ color: PALETTE.steelDim, background: "transparent", border: "none", marginLeft: 8, padding: 4 }}
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-        <input
-          style={{ ...inputStyle, flex: 1 }}
-          type="text"
-          placeholder="Nom de la nouvelle moto"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-        />
-        <button
-          onClick={() => {
-            if (!newName.trim()) return;
-            onAdd(newName.trim());
-            setNewName("");
-          }}
-          style={{ background: PALETTE.amber, color: "#1B1A17", fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, borderRadius: 8, padding: "0 16px" }}
-        >
-          Ajouter
-        </button>
-      </div>
-      <button
-        onClick={onSignOut}
-        style={{ display: "flex", alignItems: "center", gap: 8, background: "transparent", border: "none", color: PALETTE.danger, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}
-      >
-        <LogOut size={16} /> Se déconnecter
-      </button>
-    </Modal>
-  );
-}
-
-function LoginScreen() {
-  const [error, setError] = useState("");
-  const onLogin = async () => {
-    setError("");
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (e) {
-      console.error("Erreur de connexion Firebase :", e);
-      setError(`${e.code || "Erreur"} — ${e.message || "réessaie"}`);
-    }
-  };
-  return (
-    <div style={{ background: PALETTE.bg, height: "100dvh" }} className="flex flex-col items-center justify-center px-6">
-      <div style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 600, color: PALETTE.text }} className="mb-2">
-        Carnet Moto
-      </div>
-      <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }} className="mb-8 text-center">
-        Connecte-toi pour accéder à ton garage
-      </div>
-      <button
-        onClick={onLogin}
-        style={{
-          background: PALETTE.amber,
-          color: "#1B1A17",
-          fontFamily: FONT_BODY,
-          fontWeight: 600,
-          fontSize: 14,
-          borderRadius: 8,
-          padding: "12px 24px",
-        }}
-      >
-        Se connecter avec Google
-      </button>
-      {error && (
-        <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.danger }} className="mt-3">
-          {error}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehicles }) {
+function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVehicles, onSwitchVehicle, onAddVehicle, onDeleteVehicle, onSignOut }) {
   const [data, setData] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -485,7 +357,7 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehi
   const [showFuelForm, setShowFuelForm] = useState(false);
   const [showMaintForm, setShowMaintForm] = useState(false);
   const [showRuleForm, setShowRuleForm] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState(false);
+  const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const vehicleRef = doc(db, "users", user.uid, "vehicles", vehicleId);
@@ -646,7 +518,7 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehi
       }}
     >
       <FontLoader />
-      <Header vehicle={data.vehicle} onEdit={() => setEditingVehicle(true)} onOpenGarage={onOpenGarage} vehicleCount={vehicles.length} />
+      <Header vehicle={data.vehicle} />
 
       <main
         className="w-full"
@@ -683,11 +555,19 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehi
 
         {tab === "settings" && (
           <SettingsTab
+            vehicle={data.vehicle}
+            onUpdateVehicle={updateVehicle}
+            vehicles={vehicles}
+            activeVehicleId={vehicleId}
+            onSwitchVehicle={onSwitchVehicle}
+            onRequestAddVehicle={() => setShowAddVehicleForm(true)}
+            onDeleteVehicle={onDeleteVehicle}
             rules={data.rules}
-            onAdd={() => setShowRuleForm(true)}
-            onDelete={(id) => deleteItem("rules", id)}
+            onAddRule={() => setShowRuleForm(true)}
+            onDeleteRule={(id) => deleteItem("rules", id)}
             apiKeyConfigured={!!GEMINI_API_KEY}
-            user={user}
+            userEmail={user.email}
+            onSignOut={onSignOut}
           />
         )}
         <div style={{ height: 24 }} />
@@ -697,17 +577,12 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehi
 
       {showFuelForm && (
         <Modal title="Nouveau plein" onClose={() => setShowFuelForm(false)}>
-          <FuelForm onSubmit={addFuel} defaultKm={data.vehicle.currentKm} apiKey={GEMINI_API_KEY} />
+          <FuelForm onSubmit={addFuel} defaultKm={data.vehicle.currentKm} />
         </Modal>
       )}
       {showMaintForm && (
         <Modal title="Entretien effectué" onClose={() => setShowMaintForm(false)}>
-          <MaintenanceForm
-            onSubmit={addMaintenance}
-            defaultKm={data.vehicle.currentKm}
-            rules={data.rules}
-            apiKey={GEMINI_API_KEY}
-          />
+          <MaintenanceForm onSubmit={addMaintenance} defaultKm={data.vehicle.currentKm} rules={data.rules} />
         </Modal>
       )}
       {showRuleForm && (
@@ -715,13 +590,12 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onOpenGarage, onRefreshVehi
           <RuleForm onSubmit={addRule} />
         </Modal>
       )}
-      {editingVehicle && (
-        <Modal title="Ma moto" onClose={() => setEditingVehicle(false)}>
-          <VehicleForm
-            vehicle={data.vehicle}
-            onSubmit={(patch) => {
-              updateVehicle(patch);
-              setEditingVehicle(false);
+      {showAddVehicleForm && (
+        <Modal title="Ajouter une moto" onClose={() => setShowAddVehicleForm(false)}>
+          <AddVehicleForm
+            onSubmit={(name) => {
+              onAddVehicle(name);
+              setShowAddVehicleForm(false);
             }}
           />
         </Modal>
@@ -804,49 +678,19 @@ function FontLoader() {
 
 /* ---------- Header ---------- */
 
-function Header({ vehicle, onEdit, onOpenGarage, vehicleCount }) {
+function Header({ vehicle }) {
   return (
     <header
       style={{ borderBottom: `1px solid ${PALETTE.hairline}`, background: PALETTE.surface }}
       className="py-4"
     >
       <div className="flex items-center justify-between" style={{ maxWidth: CONTENT_MAX_WIDTH, margin: "0 auto", padding: "0 20px" }}>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onOpenGarage}
-            aria-label="Mon garage"
-            style={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8, padding: 8, position: "relative" }}
-          >
-            <Bike size={18} color={PALETTE.amberSoft} />
-            {vehicleCount > 1 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: -4,
-                  right: -4,
-                  background: PALETTE.amber,
-                  color: "#1B1A17",
-                  borderRadius: 999,
-                  fontSize: 9,
-                  fontWeight: 700,
-                  width: 15,
-                  height: 15,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {vehicleCount}
-              </span>
-            )}
-          </button>
-          <div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, letterSpacing: "0.12em", color: PALETTE.amber }}>
-              CARNET D'ENTRETIEN
-            </div>
-            <button onClick={onEdit} style={{ textAlign: "left", background: "transparent", border: "none", padding: 0, fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: PALETTE.text }}>
-              {vehicle.name}
-            </button>
+        <div>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, letterSpacing: "0.12em", color: PALETTE.amber }}>
+            CARNET D'ENTRETIEN
+          </div>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: PALETTE.text }}>
+            {vehicle.name}
           </div>
         </div>
         <div className="text-right">
@@ -1066,9 +910,67 @@ function StatusPill({ status }) {
 
 /* ---------- Settings tab ---------- */
 
-function SettingsTab({ rules, onAdd, onDelete, apiKeyConfigured }) {
+function SettingsTab({
+  vehicle,
+  onUpdateVehicle,
+  vehicles,
+  activeVehicleId,
+  onSwitchVehicle,
+  onRequestAddVehicle,
+  onDeleteVehicle,
+  rules,
+  onAddRule,
+  onDeleteRule,
+  apiKeyConfigured,
+  userEmail,
+  onSignOut,
+}) {
   return (
     <div className="mt-2 space-y-6">
+      <div>
+        <SectionHeader title="Mon garage" onAdd={onRequestAddVehicle} addLabel="Ajouter une moto" />
+        <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-2">
+          Connecté en tant que {userEmail}
+        </div>
+        <div className="space-y-2">
+          {vehicles.map((v) => (
+            <GarageRow
+              key={v.id}
+              vehicle={v}
+              active={v.id === activeVehicleId}
+              onSwitch={() => onSwitchVehicle(v.id)}
+              onDelete={() => onDeleteVehicle(v.id)}
+              deletable={vehicles.length > 1}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-2">
+          Ma moto
+        </div>
+        <VehicleEditor vehicle={vehicle} onUpdate={onUpdateVehicle} />
+      </div>
+
+      <div>
+        <SectionHeader title="Intervalles d'entretien" onAdd={onAddRule} addLabel="Nouveau type" />
+        <div className="space-y-2">
+          {rules.map((r) => (
+            <Card key={r.id} onDelete={() => onDeleteRule(r.id)} confirmLabel={`le suivi « ${r.name} » (et son rappel associé)`}>
+              <div className="flex justify-between items-center">
+                <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{r.name}</span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
+                  {[r.intervalKm ? `${fmtKm(r.intervalKm)} km` : null, r.intervalMonths ? `${r.intervalMonths} mois` : null]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
       <div>
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-2">
           Saisie par photo / voix
@@ -1078,7 +980,7 @@ function SettingsTab({ rules, onAdd, onDelete, apiKeyConfigured }) {
             <div className="flex items-center gap-2">
               <CheckCircle2 size={16} color={PALETTE.ok} />
               <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>
-                Clé API Gemini configurée — photo et dictée disponibles sur les pleins et entretiens.
+                Clé API Gemini configurée — disponible pour la dictée rapide.
               </span>
             </div>
           ) : (
@@ -1094,23 +996,91 @@ function SettingsTab({ rules, onAdd, onDelete, apiKeyConfigured }) {
         </div>
       </div>
 
-      <div>
-        <SectionHeader title="Types d'entretien suivis" onAdd={onAdd} addLabel="Nouveau type" />
-        <div className="space-y-2">
-          {rules.map((r) => (
-            <Card key={r.id} onDelete={() => onDelete(r.id)} confirmLabel={`le suivi « ${r.name} » (et son rappel associé)`}>
-              <div className="flex justify-between items-center">
-                <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{r.name}</span>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
-                  {[r.intervalKm ? `${fmtKm(r.intervalKm)} km` : null, r.intervalMonths ? `${r.intervalMonths} mois` : null]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </span>
-              </div>
-            </Card>
-          ))}
+      <button
+        onClick={onSignOut}
+        style={{ display: "flex", alignItems: "center", gap: 8, background: "transparent", border: "none", color: PALETTE.danger, fontFamily: FONT_BODY, fontSize: 13, fontWeight: 600 }}
+      >
+        <LogOut size={16} /> Se déconnecter
+      </button>
+    </div>
+  );
+}
+
+function GarageRow({ vehicle, active, onSwitch, onDelete, deletable }) {
+  const [confirming, setConfirming] = useState(false);
+  return (
+    <div
+      style={{
+        background: PALETTE.surface,
+        border: `1px solid ${active ? PALETTE.amber : PALETTE.hairline}`,
+        borderRadius: 10,
+        padding: 12,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "relative",
+      }}
+    >
+      <button onClick={onSwitch} style={{ textAlign: "left", flex: 1, background: "transparent", border: "none" }}>
+        <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: PALETTE.text }}>
+          {vehicle.name} {active && <span style={{ color: PALETTE.amber, fontSize: 11 }}>· active</span>}
         </div>
-      </div>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted, marginTop: 2 }}>{fmtKm(vehicle.currentKm)} km</div>
+      </button>
+      {deletable && (
+        <button
+          onClick={() => setConfirming(true)}
+          aria-label={`Supprimer ${vehicle.name}`}
+          style={{ color: PALETTE.steelDim, background: "transparent", border: "none", marginLeft: 8, padding: 4 }}
+        >
+          <Trash2 size={16} />
+        </button>
+      )}
+      {confirming && (
+        <ConfirmModal
+          message={`Supprimer "${vehicle.name}" et tout son historique ? Cette action est définitive.`}
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => {
+            setConfirming(false);
+            onDelete();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function VehicleEditor({ vehicle, onUpdate }) {
+  const [name, setName] = useState(vehicle.name);
+  const [km, setKm] = useState(String(vehicle.currentKm));
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setName(vehicle.name);
+    setKm(String(vehicle.currentKm));
+  }, [vehicle.name, vehicle.currentKm]);
+
+  const dirty = name !== vehicle.name || Number(km) !== vehicle.currentKm;
+
+  return (
+    <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+      <Field label="Nom de la moto">
+        <input style={inputStyle} type="text" value={name} onChange={(e) => setName(e.target.value)} />
+      </Field>
+      <Field label="Kilométrage actuel">
+        <input style={inputStyle} type="number" value={km} onChange={(e) => setKm(e.target.value)} />
+      </Field>
+      <button
+        disabled={!dirty}
+        onClick={() => {
+          onUpdate({ name, currentKm: Number(km) });
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        }}
+        style={{ ...submitStyle, marginTop: 4, opacity: dirty ? 1 : 0.5 }}
+      >
+        {saved ? "Enregistré ✓" : "Mettre à jour"}
+      </button>
     </div>
   );
 }
@@ -1133,19 +1103,28 @@ function SectionHeader({ title, onAdd, addLabel }) {
 }
 
 function Card({ children, onDelete, confirmLabel = "cette entrée" }) {
+  const [confirming, setConfirming] = useState(false);
   return (
     <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-3 relative group">
       {children}
       <button
-        onClick={() => {
-          if (confirm(`Supprimer ${confirmLabel} ? Cette action est définitive.`)) onDelete();
-        }}
+        onClick={() => setConfirming(true)}
         aria-label="Supprimer"
         style={{ color: PALETTE.steelDim }}
         className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
       >
         <Trash2 size={14} />
       </button>
+      {confirming && (
+        <ConfirmModal
+          message={`Supprimer ${confirmLabel} ? Cette action est définitive.`}
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => {
+            setConfirming(false);
+            onDelete();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1229,6 +1208,47 @@ function Modal({ title, onClose, children }) {
   );
 }
 
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  return (
+    <Modal title="Confirmer la suppression" onClose={onCancel}>
+      <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text, marginBottom: 20 }}>{message}</div>
+      <div className="flex gap-2">
+        <button
+          onClick={onCancel}
+          style={{
+            flex: 1,
+            background: PALETTE.surface,
+            border: `1px solid ${PALETTE.hairline}`,
+            color: PALETTE.text,
+            fontFamily: FONT_BODY,
+            fontWeight: 600,
+            fontSize: 14,
+            borderRadius: 8,
+            padding: "12px",
+          }}
+        >
+          Annuler
+        </button>
+        <button
+          onClick={onConfirm}
+          style={{
+            flex: 1,
+            background: PALETTE.danger,
+            color: "#fff",
+            fontFamily: FONT_BODY,
+            fontWeight: 600,
+            fontSize: 14,
+            borderRadius: 8,
+            padding: "12px",
+          }}
+        >
+          Supprimer
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 function Field({ label, children }) {
   return (
     <div className="mb-3">
@@ -1263,102 +1283,6 @@ const submitStyle = {
   marginTop: 8,
 };
 
-function AiCaptureBar({ apiKey, onExtract, promptText, disabled }) {
-  const [status, setStatus] = useState("idle"); // idle | busy | error
-  const [error, setError] = useState("");
-  const [voiceOpen, setVoiceOpen] = useState(false);
-  const [voiceText, setVoiceText] = useState("");
-  const fileRef = useRef(null);
-
-  const runExtraction = async (payload) => {
-    if (!apiKey) {
-      setError("Clé API Gemini manquante (voir Réglages)");
-      setStatus("error");
-      return;
-    }
-    setStatus("busy");
-    setError("");
-    try {
-      const result = await geminiExtract(apiKey, payload);
-      onExtract(result);
-      setStatus("idle");
-      setVoiceOpen(false);
-      setVoiceText("");
-    } catch (e) {
-      setError(e.message || "Échec de l'analyse, réessaie");
-      setStatus("error");
-    }
-  };
-
-  const onFileChange = async (e) => {
-    const file = e.target.files[0];
-    e.target.value = "";
-    if (!file) return;
-    const base64 = await fileToBase64(file);
-    runExtraction({ promptText, imageBase64: base64, imageMimeType: file.type });
-  };
-
-  const onValidateVoice = () => {
-    if (!voiceText.trim()) return;
-    runExtraction({ promptText: `${promptText}\n\nTranscription vocale : "${voiceText.trim()}"` });
-  };
-
-  return (
-    <div className="mb-4">
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={disabled || status === "busy"}
-          onClick={() => fileRef.current?.click()}
-          style={{ ...aiButtonStyle, opacity: status === "busy" ? 0.6 : 1 }}
-        >
-          <Camera size={14} /> Photo
-        </button>
-        <button
-          type="button"
-          disabled={disabled || status === "busy"}
-          onClick={() => setVoiceOpen((v) => !v)}
-          style={{ ...aiButtonStyle, opacity: status === "busy" ? 0.6 : 1 }}
-        >
-          <Mic size={14} /> Dicter
-        </button>
-        {status === "busy" && (
-          <span className="flex items-center" style={{ color: PALETTE.amberSoft }}>
-            <Loader2 size={16} className="animate-spin" />
-          </span>
-        )}
-      </div>
-
-      {voiceOpen && (
-        <div className="mt-2">
-          <textarea
-            style={{ ...inputStyle, minHeight: 70, resize: "vertical" }}
-            placeholder="Appuie sur le micro de ton clavier pour dicter, ex. « plein de 12 litres et demi, 22 euros, 69 100 kilomètres »"
-            value={voiceText}
-            onChange={(e) => setVoiceText(e.target.value)}
-            autoFocus
-          />
-          <button
-            type="button"
-            onClick={onValidateVoice}
-            disabled={status === "busy" || !voiceText.trim()}
-            style={{ ...submitStyle, marginTop: 6, opacity: !voiceText.trim() ? 0.5 : 1 }}
-          >
-            Analyser
-          </button>
-        </div>
-      )}
-
-      {status === "error" && (
-        <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.danger }} className="mt-2">
-          {error}
-        </div>
-      )}
-      <input type="file" accept="image/*" capture="environment" ref={fileRef} style={{ display: "none" }} onChange={onFileChange} />
-    </div>
-  );
-}
-
 const aiButtonStyle = {
   display: "flex",
   alignItems: "center",
@@ -1373,7 +1297,7 @@ const aiButtonStyle = {
   padding: "8px 12px",
 };
 
-function FuelForm({ onSubmit, defaultKm, apiKey }) {
+function FuelForm({ onSubmit, defaultKm }) {
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), km: defaultKm || "", liters: "", price: "" });
   return (
     <form
@@ -1383,18 +1307,6 @@ function FuelForm({ onSubmit, defaultKm, apiKey }) {
         onSubmit(form);
       }}
     >
-      <AiCaptureBar
-        apiKey={apiKey}
-        promptText="Analyse cette photo de ticket de caisse ou d'écran de pompe à essence, ou cette transcription vocale d'un plein d'essence moto en français. Réponds uniquement en JSON strict, sans texte autour, avec les clés km (kilométrage au compteur si mentionné/visible, sinon null), liters (nombre de litres, sinon null), price (prix total payé en euros, sinon null)."
-        onExtract={(r) => {
-          setForm((f) => ({
-            ...f,
-            km: r.km != null ? String(r.km) : f.km,
-            liters: r.liters != null ? String(r.liters) : f.liters,
-            price: r.price != null ? String(r.price) : f.price,
-          }));
-        }}
-      />
       <Field label="Date">
         <input style={inputStyle} type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
       </Field>
@@ -1412,10 +1324,8 @@ function FuelForm({ onSubmit, defaultKm, apiKey }) {
   );
 }
 
-function MaintenanceForm({ onSubmit, defaultKm, rules, apiKey }) {
-  const types = rules.map((r) => r.name);
+function MaintenanceForm({ onSubmit, defaultKm, rules }) {
   const pickerTypes = rules.filter((r) => !r.hideFromPicker).map((r) => r.name);
-  const knownTypes = [...types, ...EXTRA_KNOWN_TYPES.filter((t) => !types.includes(t))];
   const visibleTypes = [...pickerTypes, ...EXTRA_KNOWN_TYPES.filter((t) => !pickerTypes.includes(t))];
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), km: defaultKm || "", type: pickerTypes[0] || "", note: "", cost: "" });
   return (
@@ -1426,19 +1336,6 @@ function MaintenanceForm({ onSubmit, defaultKm, rules, apiKey }) {
         onSubmit(form);
       }}
     >
-      <AiCaptureBar
-        apiKey={apiKey}
-        promptText={`Analyse cette photo (facture d'atelier, écran de compteur) ou cette transcription vocale en français d'une intervention d'entretien moto. Réponds uniquement en JSON strict, sans texte autour, avec les clés km (kilométrage si mentionné/visible, sinon null), type (reprends EXACTEMENT un de ces types si le sens correspond, même reformulé/synonyme : ${knownTypes.join(", ")} — sinon une courte description, sinon null), note (détails complémentaires, sinon null), cost (coût total en euros si mentionné, sinon null).`}
-        onExtract={(r) => {
-          setForm((f) => ({
-            ...f,
-            km: r.km != null ? String(r.km) : f.km,
-            type: r.type ? normalizeType(r.type, knownTypes) : f.type,
-            note: r.note || f.note,
-            cost: r.cost != null ? String(r.cost) : f.cost,
-          }));
-        }}
-      />
       <Field label="Type d'entretien">
         <input
           style={inputStyle}
@@ -1722,22 +1619,27 @@ function RuleForm({ onSubmit }) {
   );
 }
 
-function VehicleForm({ vehicle, onSubmit }) {
-  const [form, setForm] = useState({ name: vehicle.name, currentKm: vehicle.currentKm });
+function AddVehicleForm({ onSubmit }) {
+  const [name, setName] = useState("");
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ name: form.name, currentKm: Number(form.currentKm) });
+        if (!name.trim()) return;
+        onSubmit(name.trim());
       }}
     >
       <Field label="Nom de la moto">
-        <input style={inputStyle} type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <input
+          style={inputStyle}
+          type="text"
+          placeholder="ex. Ducati Monster"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+        />
       </Field>
-      <Field label="Kilométrage actuel">
-        <input style={inputStyle} type="number" value={form.currentKm} onChange={(e) => setForm({ ...form, currentKm: e.target.value })} />
-      </Field>
-      <button type="submit" style={submitStyle}>Mettre à jour</button>
+      <button type="submit" style={submitStyle}>Ajouter au garage</button>
     </form>
   );
 }
