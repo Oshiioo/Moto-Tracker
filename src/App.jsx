@@ -638,7 +638,9 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVehicles, onSwitch
 
 /* ---------- Design tokens ---------- */
 
-const CONTENT_MAX_WIDTH = 600;
+// Fluide (100%) du smartphone jusqu'à la tablette, puis fixe au-delà
+// (~1280px correspond à un écran 24" avec mise à l'échelle standard)
+const CONTENT_MAX_WIDTH = 1280;
 
 const PALETTE = {
   bg: "#1B1A17",
