@@ -211,7 +211,7 @@ const IMPORTED_MAINTENANCE = [
 ].map((m, i) => ({ id: `import-${i}`, ...m }));
 
 const DEFAULT_DATA = {
-  vehicle: { name: "CB500F 2016", currentKm: 68984 },
+  vehicle: { name: "CB500F 2016", currentKm: 68984, status: "active", acquisitionKm: 51140 },
   fuel: [{ id: "fuel-1", date: "2026-07-26", km: 68842, price: 23.42 }],
   maintenance: IMPORTED_MAINTENANCE,
   rules: DEFAULT_RULES,
@@ -244,6 +244,17 @@ function migrateData(loaded) {
       newMaintenance.push({ id: uid(), date: today, km, type: "Usure pneu arrière", note: "Point de départ du suivi" });
     }
     next = { ...next, rules: newRules, maintenance: newMaintenance };
+  }
+  if (next.vehicle.status === undefined || next.vehicle.acquisitionKm === undefined) {
+    const isCB500F = next.vehicle.name === "CB500F 2016";
+    next = {
+      ...next,
+      vehicle: {
+        ...next.vehicle,
+        status: next.vehicle.status ?? "active",
+        acquisitionKm: next.vehicle.acquisitionKm ?? (isCB500F ? 51140 : 0),
+      },
+    };
   }
   return next;
 }
@@ -297,7 +308,18 @@ function GarageGate({ user }) {
 
   const refreshVehicles = useCallback(async () => {
     const snap = await getDocs(collection(db, "users", user.uid, "vehicles"));
-    const list = snap.docs.map((d) => ({ id: d.id, name: d.data().vehicle?.name || "Ma moto", currentKm: d.data().vehicle?.currentKm || 0 }));
+    const list = snap.docs.map((d) => {
+      const v = d.data().vehicle || {};
+      return {
+        id: d.id,
+        name: v.name || "Ma moto",
+        currentKm: v.currentKm || 0,
+        status: v.status || "active",
+        acquisitionKm: v.acquisitionKm || 0,
+        saleDate: v.saleDate || null,
+        finalKm: v.finalKm != null ? v.finalKm : null,
+      };
+    });
     setVehicles(list);
     return list;
   }, [user.uid]);
@@ -335,8 +357,9 @@ function GarageGate({ user }) {
 
   const onAddVehicle = async (name, currentKm = 0, rules = []) => {
     const newId = uid();
+    const km = Number(currentKm) || 0;
     await setDoc(doc(db, "users", user.uid, "vehicles", newId), {
-      vehicle: { name: name || "Nouvelle moto", currentKm: Number(currentKm) || 0 },
+      vehicle: { name: name || "Nouvelle moto", currentKm: km, status: "active", acquisitionKm: km },
       fuel: [],
       maintenance: [],
       rules,
@@ -572,6 +595,7 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVehicles, onSwitch
             fuelCount={data.fuel.length}
             maintCount={data.maintenance.length}
             onGoMaint={() => setTab("maintenance")}
+            vehicles={vehicles}
           />
         )}
 
@@ -762,9 +786,15 @@ function Header({ vehicle }) {
 
 /* ---------- Dashboard ---------- */
 
-function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount, onGoMaint }) {
+function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount, onGoMaint, vehicles }) {
   const overdue = maintStatus.filter((m) => m.status === "overdue");
   const soon = maintStatus.filter((m) => m.status === "soon");
+
+  const parcourus = (v) => {
+    const endKm = v.status === "sold" && v.finalKm != null ? v.finalKm : v.currentKm;
+    return Math.max(0, endKm - (v.acquisitionKm || 0));
+  };
+  const totalParcourus = vehicles ? vehicles.reduce((sum, v) => sum + parcourus(v), 0) : 0;
 
   return (
     <div className="space-y-4 mt-2">
@@ -808,6 +838,30 @@ function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount
         <div style={{ background: PALETTE.surface, border: `1px dashed ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
           <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
             Aucun entretien enregistré pour l'instant. Ajoute ta dernière vidange ou révision pour démarrer le suivi.
+          </div>
+        </div>
+      )}
+
+      {vehicles && vehicles.length > 0 && (
+        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
+            MON GARAGE EN UN COUP D'ŒIL
+          </div>
+          <div className="space-y-2 mb-3">
+            {vehicles.map((v) => (
+              <div key={v.id} className="flex items-center justify-between">
+                <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>
+                  {v.name}
+                  {v.status === "sold" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}> · vendue</span>}
+                  {v.status === "archived" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}> · archivée</span>}
+                </span>
+                <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>{fmtKm(parcourus(v))} km</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ borderTop: `1px solid ${PALETTE.hairline}` }} className="pt-3 flex items-center justify-between">
+            <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, color: PALETTE.text }}>Total parcouru</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: PALETTE.amberSoft }}>{fmtKm(totalParcourus)} km</span>
           </div>
         </div>
       )}
@@ -1077,9 +1131,14 @@ function GarageRow({ vehicle, active, onSwitch, onDelete, deletable }) {
     >
       <button onClick={onSwitch} style={{ textAlign: "left", flex: 1, background: "transparent", border: "none" }}>
         <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: PALETTE.text }}>
-          {vehicle.name} {active && <span style={{ color: PALETTE.amber, fontSize: 11 }}>· active</span>}
+          {vehicle.name}{" "}
+          {active && <span style={{ color: PALETTE.amber, fontSize: 11 }}>· active</span>}
+          {vehicle.status === "sold" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>· vendue</span>}
+          {vehicle.status === "archived" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>· archivée</span>}
         </div>
-        <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted, marginTop: 2 }}>{fmtKm(vehicle.currentKm)} km</div>
+        <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted, marginTop: 2 }}>
+          {vehicle.status === "sold" && vehicle.finalKm != null ? fmtKm(vehicle.finalKm) : fmtKm(vehicle.currentKm)} km
+        </div>
       </button>
       {deletable && (
         <button
@@ -1107,14 +1166,27 @@ function GarageRow({ vehicle, active, onSwitch, onDelete, deletable }) {
 function VehicleEditor({ vehicle, onUpdate }) {
   const [name, setName] = useState(vehicle.name);
   const [km, setKm] = useState(String(vehicle.currentKm));
+  const [status, setStatus] = useState(vehicle.status || "active");
+  const [acquisitionKm, setAcquisitionKm] = useState(String(vehicle.acquisitionKm || 0));
+  const [saleDate, setSaleDate] = useState(vehicle.saleDate || new Date().toISOString().slice(0, 10));
+  const [finalKm, setFinalKm] = useState(String(vehicle.finalKm ?? vehicle.currentKm));
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setName(vehicle.name);
     setKm(String(vehicle.currentKm));
-  }, [vehicle.name, vehicle.currentKm]);
+    setStatus(vehicle.status || "active");
+    setAcquisitionKm(String(vehicle.acquisitionKm || 0));
+    setSaleDate(vehicle.saleDate || new Date().toISOString().slice(0, 10));
+    setFinalKm(String(vehicle.finalKm ?? vehicle.currentKm));
+  }, [vehicle.name, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.saleDate, vehicle.finalKm]);
 
-  const dirty = name !== vehicle.name || Number(km) !== vehicle.currentKm;
+  const dirty =
+    name !== vehicle.name ||
+    Number(km) !== vehicle.currentKm ||
+    status !== (vehicle.status || "active") ||
+    Number(acquisitionKm) !== (vehicle.acquisitionKm || 0) ||
+    (status === "sold" && (saleDate !== vehicle.saleDate || Number(finalKm) !== vehicle.finalKm));
 
   return (
     <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
@@ -1124,10 +1196,36 @@ function VehicleEditor({ vehicle, onUpdate }) {
       <Field label="Kilométrage actuel">
         <input style={inputStyle} type="number" value={km} onChange={(e) => setKm(e.target.value)} />
       </Field>
+      <Field label="Kilométrage d'acquisition — pour calculer les km réellement parcourus">
+        <input style={inputStyle} type="number" value={acquisitionKm} onChange={(e) => setAcquisitionKm(e.target.value)} />
+      </Field>
+      <Field label="Statut">
+        <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="active">Active</option>
+          <option value="sold">Vendue</option>
+          <option value="archived">Archivée</option>
+        </select>
+      </Field>
+      {status === "sold" && (
+        <>
+          <Field label="Date de vente">
+            <input style={inputStyle} type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} />
+          </Field>
+          <Field label="Kilométrage final">
+            <input style={inputStyle} type="number" value={finalKm} onChange={(e) => setFinalKm(e.target.value)} />
+          </Field>
+        </>
+      )}
       <button
         disabled={!dirty}
         onClick={() => {
-          onUpdate({ name, currentKm: Number(km) });
+          onUpdate({
+            name,
+            currentKm: Number(km),
+            status,
+            acquisitionKm: Number(acquisitionKm),
+            ...(status === "sold" ? { saleDate, finalKm: Number(finalKm) } : { saleDate: null, finalKm: null }),
+          });
           setSaved(true);
           setTimeout(() => setSaved(false), 2000);
         }}
