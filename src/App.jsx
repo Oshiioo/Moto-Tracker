@@ -318,6 +318,8 @@ function GarageGate({ user }) {
         acquisitionKm: v.acquisitionKm || 0,
         saleDate: v.saleDate || null,
         finalKm: v.finalKm != null ? v.finalKm : null,
+        archiveReason: v.archiveReason || null,
+        archiveDate: v.archiveDate || null,
       };
     });
     setVehicles(list);
@@ -847,19 +849,19 @@ function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount
           <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
             MON GARAGE EN UN COUP D'ŒIL
           </div>
-          <div className="space-y-2 mb-3">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
             {vehicles.map((v) => (
-              <div key={v.id} className="flex items-center justify-between">
+              <div key={v.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>
                   {v.name}
                   {v.status === "sold" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}> · vendue</span>}
-                  {v.status === "archived" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}> · archivée</span>}
+                  {v.status === "archived" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}> · archivée{v.archiveReason ? ` (${v.archiveReason.toLowerCase()})` : ""}</span>}
                 </span>
                 <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>{fmtKm(parcourus(v))} km</span>
               </div>
             ))}
           </div>
-          <div style={{ borderTop: `1px solid ${PALETTE.hairline}` }} className="pt-3 flex items-center justify-between">
+          <div style={{ borderTop: `1px solid ${PALETTE.hairline}`, paddingTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, color: PALETTE.text }}>Total parcouru</span>
             <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: PALETTE.amberSoft }}>{fmtKm(totalParcourus)} km</span>
           </div>
@@ -1134,7 +1136,7 @@ function GarageRow({ vehicle, active, onSwitch, onDelete, deletable }) {
           {vehicle.name}{" "}
           {active && <span style={{ color: PALETTE.amber, fontSize: 11 }}>· active</span>}
           {vehicle.status === "sold" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>· vendue</span>}
-          {vehicle.status === "archived" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>· archivée</span>}
+          {vehicle.status === "archived" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>· archivée{vehicle.archiveReason ? ` (${vehicle.archiveReason.toLowerCase()})` : ""}</span>}
         </div>
         <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted, marginTop: 2 }}>
           {vehicle.status === "sold" && vehicle.finalKm != null ? fmtKm(vehicle.finalKm) : fmtKm(vehicle.currentKm)} km
@@ -1170,6 +1172,8 @@ function VehicleEditor({ vehicle, onUpdate }) {
   const [acquisitionKm, setAcquisitionKm] = useState(String(vehicle.acquisitionKm || 0));
   const [saleDate, setSaleDate] = useState(vehicle.saleDate || new Date().toISOString().slice(0, 10));
   const [finalKm, setFinalKm] = useState(String(vehicle.finalKm ?? vehicle.currentKm));
+  const [archiveReason, setArchiveReason] = useState(vehicle.archiveReason || "Accidentée");
+  const [archiveDate, setArchiveDate] = useState(vehicle.archiveDate || new Date().toISOString().slice(0, 10));
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -1179,14 +1183,17 @@ function VehicleEditor({ vehicle, onUpdate }) {
     setAcquisitionKm(String(vehicle.acquisitionKm || 0));
     setSaleDate(vehicle.saleDate || new Date().toISOString().slice(0, 10));
     setFinalKm(String(vehicle.finalKm ?? vehicle.currentKm));
-  }, [vehicle.name, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.saleDate, vehicle.finalKm]);
+    setArchiveReason(vehicle.archiveReason || "Accidentée");
+    setArchiveDate(vehicle.archiveDate || new Date().toISOString().slice(0, 10));
+  }, [vehicle.name, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.saleDate, vehicle.finalKm, vehicle.archiveReason, vehicle.archiveDate]);
 
   const dirty =
     name !== vehicle.name ||
     Number(km) !== vehicle.currentKm ||
     status !== (vehicle.status || "active") ||
     Number(acquisitionKm) !== (vehicle.acquisitionKm || 0) ||
-    (status === "sold" && (saleDate !== vehicle.saleDate || Number(finalKm) !== vehicle.finalKm));
+    (status === "sold" && (saleDate !== vehicle.saleDate || Number(finalKm) !== vehicle.finalKm)) ||
+    (status === "archived" && (archiveReason !== vehicle.archiveReason || archiveDate !== vehicle.archiveDate || Number(finalKm) !== vehicle.finalKm));
 
   return (
     <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
@@ -1216,6 +1223,23 @@ function VehicleEditor({ vehicle, onUpdate }) {
           </Field>
         </>
       )}
+      {status === "archived" && (
+        <>
+          <Field label="Raison">
+            <select style={inputStyle} value={archiveReason} onChange={(e) => setArchiveReason(e.target.value)}>
+              <option value="Accidentée">Accidentée</option>
+              <option value="Volée">Volée</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </Field>
+          <Field label="Date">
+            <input style={inputStyle} type="date" value={archiveDate} onChange={(e) => setArchiveDate(e.target.value)} />
+          </Field>
+          <Field label="Kilométrage au moment des faits">
+            <input style={inputStyle} type="number" value={finalKm} onChange={(e) => setFinalKm(e.target.value)} />
+          </Field>
+        </>
+      )}
       <button
         disabled={!dirty}
         onClick={() => {
@@ -1224,7 +1248,9 @@ function VehicleEditor({ vehicle, onUpdate }) {
             currentKm: Number(km),
             status,
             acquisitionKm: Number(acquisitionKm),
-            ...(status === "sold" ? { saleDate, finalKm: Number(finalKm) } : { saleDate: null, finalKm: null }),
+            ...(status === "sold" ? { saleDate, finalKm: Number(finalKm) } : { saleDate: null }),
+            ...(status === "archived" ? { archiveReason, archiveDate, finalKm: Number(finalKm) } : { archiveReason: null, archiveDate: null }),
+            ...(status === "active" ? { finalKm: null } : {}),
           });
           setSaved(true);
           setTimeout(() => setSaved(false), 2000);
