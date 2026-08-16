@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Fuel, Wrench, Gauge, Settings, Plus, Trash2, X, AlertTriangle, CheckCircle2, Clock, Camera, Mic, Loader2, LogOut, Bike } from "lucide-react";
 import { HashRouter, useNavigate, useLocation } from "react-router-dom";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+} from "recharts";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import {
   collection,
@@ -593,6 +606,7 @@ function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVehicles, onSwitch
           <Dashboard
             vehicle={data.vehicle}
             avgConsumption={avgConsumption}
+            consumption={consumption}
             maintStatus={maintStatus}
             fuelCount={data.fuel.length}
             maintCount={data.maintenance.length}
@@ -788,7 +802,20 @@ function Header({ vehicle }) {
 
 /* ---------- Dashboard ---------- */
 
-function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount, onGoMaint, vehicles }) {
+function ruleProgress(rule) {
+  if (rule.intervalKm && rule.remainingKm != null) {
+    return (rule.intervalKm - rule.remainingKm) / rule.intervalKm;
+  }
+  if (rule.intervalMonths && rule.remainingDays != null) {
+    const totalDays = rule.intervalMonths * 30;
+    return (totalDays - rule.remainingDays) / totalDays;
+  }
+  return 0;
+}
+
+const statusColor = (status) => (status === "overdue" ? PALETTE.danger : status === "soon" ? PALETTE.yellow : PALETTE.ok);
+
+function Dashboard({ vehicle, avgConsumption, consumption, maintStatus, fuelCount, maintCount, onGoMaint, vehicles }) {
   const overdue = maintStatus.filter((m) => m.status === "overdue");
   const soon = maintStatus.filter((m) => m.status === "soon");
 
@@ -798,12 +825,41 @@ function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount
   };
   const totalParcourus = vehicles ? vehicles.reduce((sum, v) => sum + parcourus(v), 0) : 0;
 
+  const topMaint = [...maintStatus]
+    .filter((r) => r.intervalKm || r.intervalMonths)
+    .sort((a, b) => ruleProgress(b) - ruleProgress(a))
+    .slice(0, 4);
+
   return (
     <div className="space-y-4 mt-2">
       <div className="grid grid-cols-2 gap-3">
         <StatCard label="Conso. moyenne" value={avgConsumption ? avgConsumption.toFixed(1) : "—"} unit="L/100km" />
         <StatCard label="Pleins enregistrés" value={fuelCount} unit={fuelCount > 1 ? "entrées" : "entrée"} />
       </div>
+
+      {consumption && consumption.length >= 2 && (
+        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
+            CONSOMMATION
+          </div>
+          <div style={{ height: 140 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={consumption.map((c) => ({ km: c.km, value: Number(c.value.toFixed(1)) }))} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                <XAxis dataKey="km" tickFormatter={fmtKm} stroke={PALETTE.textMuted} fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke={PALETTE.textMuted} fontSize={10} tickLine={false} axisLine={false} width={30} />
+                <Tooltip
+                  contentStyle={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: PALETTE.textMuted }}
+                  itemStyle={{ color: PALETTE.text }}
+                  labelFormatter={(km) => `${fmtKm(km)} km`}
+                  formatter={(v) => [`${v} L/100km`, "Conso"]}
+                />
+                <Line type="monotone" dataKey="value" stroke={PALETTE.amber} strokeWidth={2} dot={{ r: 3, fill: PALETTE.amber }} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {(overdue.length > 0 || soon.length > 0) && (
         <div
@@ -813,6 +869,13 @@ function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount
           <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
             À SURVEILLER
           </div>
+
+          <div className="flex justify-around mb-4">
+            {topMaint.map((r) => (
+              <MiniRing key={r.id} percent={ruleProgress(r)} color={statusColor(r.status)} label={r.name} />
+            ))}
+          </div>
+
           <div className="space-y-2">
             {overdue.map((m) => (
               <AlertRow key={m.id} rule={m} />
@@ -828,11 +891,20 @@ function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount
       )}
 
       {overdue.length === 0 && soon.length === 0 && maintCount > 0 && (
-        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4 flex items-center gap-3">
-          <CheckCircle2 size={20} color={PALETTE.ok} />
-          <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
-            Tout l'entretien est à jour.
+        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <CheckCircle2 size={20} color={PALETTE.ok} />
+            <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
+              Tout l'entretien est à jour.
+            </div>
           </div>
+          {topMaint.length > 0 && (
+            <div className="flex justify-around">
+              {topMaint.map((r) => (
+                <MiniRing key={r.id} percent={ruleProgress(r)} color={statusColor(r.status)} label={r.name} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -849,17 +921,25 @@ function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount
           <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
             MON GARAGE EN UN COUP D'ŒIL
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-            {vehicles.map((v) => (
-              <div key={v.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>
-                  {v.name}
-                  {v.status === "sold" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}> · vendue</span>}
-                  {v.status === "archived" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}> · archivée{v.archiveReason ? ` (${v.archiveReason.toLowerCase()})` : ""}</span>}
-                </span>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>{fmtKm(parcourus(v))} km</span>
-              </div>
-            ))}
+          <div style={{ height: Math.max(60, vehicles.length * 44) }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={vehicles.map((v) => ({ name: v.name, km: parcourus(v) }))}
+                layout="vertical"
+                margin={{ top: 0, right: 24, left: 0, bottom: 0 }}
+              >
+                <XAxis type="number" hide />
+                <YAxis type="category" dataKey="name" width={100} stroke={PALETTE.textMuted} fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: PALETTE.text }}
+                  itemStyle={{ color: PALETTE.amberSoft }}
+                  formatter={(v) => [`${fmtKm(v)} km`, "Parcourus"]}
+                  cursor={{ fill: PALETTE.hairline, opacity: 0.3 }}
+                />
+                <Bar dataKey="km" fill={PALETTE.amberSoft} radius={[0, 4, 4, 0]} isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
           <div style={{ borderTop: `1px solid ${PALETTE.hairline}`, paddingTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, color: PALETTE.text }}>Total parcouru</span>
@@ -867,6 +947,52 @@ function Dashboard({ vehicle, avgConsumption, maintStatus, fuelCount, maintCount
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function MiniRing({ percent, color, label }) {
+  const clamped = Math.min(Math.max(percent, 0), 1);
+  const data = [{ value: clamped }, { value: 1 - clamped }];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 70 }}>
+      <div style={{ width: 60, height: 60, position: "relative" }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="value"
+              startAngle={90}
+              endAngle={-270}
+              innerRadius={20}
+              outerRadius={28}
+              stroke="none"
+              isAnimationActive={false}
+            >
+              <Cell fill={color} />
+              <Cell fill={PALETTE.hairline} />
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: FONT_MONO,
+            fontSize: 11,
+            fontWeight: 700,
+            color: PALETTE.text,
+          }}
+        >
+          {Math.round(clamped * 100)}%
+        </div>
+      </div>
+      <div style={{ fontFamily: FONT_BODY, fontSize: 10, color: PALETTE.textMuted, textAlign: "center", marginTop: 4, lineHeight: 1.2 }}>
+        {label}
+      </div>
     </div>
   );
 }
