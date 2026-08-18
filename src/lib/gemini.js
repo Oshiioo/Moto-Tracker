@@ -1,59 +1,56 @@
-export const GEMINI_MODEL = "gemini-3.6-flash";
-// Clé lue depuis le fichier .env.local (voir instructions), jamais depuis l'interface
-export const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+// L'app ne détient plus jamais la clé Gemini — elle appelle un Worker Cloudflare
+// qui garde la clé en secret côté serveur et relaie la requête à Gemini.
+const WORKER_URL = import.meta.env.VITE_GEMINI_WORKER_URL || "";
+const WORKER_SECRET = import.meta.env.VITE_GEMINI_WORKER_SECRET || "";
+
+export const GEMINI_CONFIGURED = !!(WORKER_URL && WORKER_SECRET);
 
 const ERROR_MESSAGES = {
-  404: "Modèle Gemini introuvable (config à mettre à jour)",
-  401: "Clé API invalide",
-  403: "Clé API refusée (vérifie les restrictions dans AI Studio)",
+  401: "Accès refusé par le proxy (secret partagé incorrect)",
+  404: "Worker introuvable (vérifie VITE_GEMINI_WORKER_URL)",
   429: "Quota Gemini atteint pour aujourd'hui",
 };
 
-export async function geminiExtract(apiKey, { promptText, imageBase64, imageMimeType }) {
-  const parts = [{ text: promptText }];
-  if (imageBase64) parts.push({ inline_data: { mime_type: imageMimeType, data: imageBase64 } });
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: { responseMimeType: "application/json" },
-      }),
-    }
-  );
+async function callWorker(body) {
+  if (!GEMINI_CONFIGURED) {
+    throw new Error("Worker Gemini non configuré (voir Réglages)");
+  }
+  const res = await fetch(WORKER_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shared-Secret": WORKER_SECRET,
+    },
+    body: JSON.stringify(body),
+  });
   if (!res.ok) {
-    throw new Error(ERROR_MESSAGES[res.status] || `Erreur Gemini (${res.status})`);
+    throw new Error(ERROR_MESSAGES[res.status] || `Erreur (${res.status})`);
   }
   const data = await res.json();
   const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!raw) throw new Error("Réponse vide, réessaie");
+  return raw;
+}
+
+export async function geminiExtract({ promptText, imageBase64, imageMimeType }) {
+  const parts = [{ text: promptText }];
+  if (imageBase64) parts.push({ inline_data: { mime_type: imageMimeType, data: imageBase64 } });
+  const raw = await callWorker({
+    contents: [{ parts }],
+    generationConfig: { responseMimeType: "application/json" },
+  });
   return JSON.parse(raw);
 }
 
 // Variante avec recherche web activée (grounding) — l'API ne permet pas de combiner
 // la recherche avec le mode JSON strict, donc on demande le JSON dans le prompt
 // et on extrait/parse la réponse de façon tolérante.
-export async function geminiSearchExtract(apiKey, promptText) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }],
-        tools: [{ google_search: {} }],
-      }),
-    }
-  );
-  if (!res.ok) {
-    throw new Error(ERROR_MESSAGES[res.status] || `Erreur Gemini (${res.status})`);
-  }
-  const searchData = await res.json();
-  const searchRaw = searchData?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!searchRaw) throw new Error("Réponse vide, réessaie");
-  const match = searchRaw.match(/\{[\s\S]*\}/);
+export async function geminiSearchExtract(promptText) {
+  const raw = await callWorker({
+    contents: [{ parts: [{ text: promptText }] }],
+    tools: [{ google_search: {} }],
+  });
+  const match = raw.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("Réponse inattendue, réessaie");
   return JSON.parse(match[0]);
 }

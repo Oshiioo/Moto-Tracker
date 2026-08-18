@@ -76,17 +76,14 @@ export default function SettingsTab({
             <div className="flex items-center gap-2">
               <CheckCircle2 size={16} color={PALETTE.ok} />
               <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>
-                Clé API Gemini configurée — disponible pour la dictée rapide.
+                Assistant IA configuré (via Worker sécurisé) — disponible pour la dictée rapide.
               </span>
             </div>
           ) : (
             <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }}>
-              Aucune clé API Gemini détectée. Ajoute <code>VITE_GEMINI_API_KEY=ta_clé</code> dans un fichier{" "}
-              <code>.env.local</code> à la racine du projet (clé gratuite sur{" "}
-              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: PALETTE.amberSoft }}>
-                aistudio.google.com/apikey
-              </a>
-              ), puis redémarre <code>npm run dev</code>.
+              Worker Gemini non configuré. Ajoute <code>VITE_GEMINI_WORKER_URL</code> et{" "}
+              <code>VITE_GEMINI_WORKER_SECRET</code> dans <code>.env.local</code>, puis redémarre{" "}
+              <code>npm run dev</code>.
             </div>
           )}
         </div>

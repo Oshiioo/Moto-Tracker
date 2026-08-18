@@ -3,9 +3,9 @@ import { Loader2 } from "lucide-react";
 import Field from "../ui/Field";
 import { PALETTE, FONT_BODY, inputStyle, submitStyle, aiButtonStyle } from "../../theme/palette";
 import { uid } from "../../lib/format";
-import { geminiSearchExtract } from "../../lib/gemini";
+import { geminiSearchExtract, GEMINI_CONFIGURED } from "../../lib/gemini";
 
-export default function AddVehicleForm({ onSubmit, apiKey }) {
+export default function AddVehicleForm({ onSubmit }) {
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
@@ -15,7 +15,7 @@ export default function AddVehicleForm({ onSubmit, apiKey }) {
   const [searchError, setSearchError] = useState("");
   const [suggestions, setSuggestions] = useState([]); // [{ id, name, intervalKm, intervalMonths, checked }]
 
-  const canSearch = apiKey && brand.trim() && model.trim();
+  const canSearch = GEMINI_CONFIGURED && brand.trim() && model.trim();
 
   const runSearch = async () => {
     setSearchStatus("busy");
@@ -24,7 +24,7 @@ export default function AddVehicleForm({ onSubmit, apiKey }) {
 {"items": [{"name": "Vidange", "intervalKm": 12000, "intervalMonths": null}, ...]}
 Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, Bougies, Graissage de la chaîne, Tension de la chaîne, Contrôle plaquettes et disques, Purge des liquides de frein, Liquide de refroidissement, Entretien annuel — sinon un nom court et clair. intervalKm et intervalMonths sont des nombres ou null (au moins un des deux renseigné par entrée). N'inclus que les intervalles dont tu es raisonnablement sûr à partir de sources fiables (constructeur, notices, revendeurs officiels).`;
     try {
-      const result = await geminiSearchExtract(apiKey, promptText);
+      const result = await geminiSearchExtract(promptText);
       const items = Array.isArray(result?.items) ? result.items : [];
       setSuggestions(
         items
@@ -100,9 +100,9 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
           "Rechercher les intervalles constructeur"
         )}
       </button>
-      {!apiKey && (
+      {!GEMINI_CONFIGURED && (
         <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-3">
-          Clé API Gemini non configurée — la recherche n'est pas disponible, tu peux ajouter les intervalles manuellement après coup.
+          Assistant IA non configuré — la recherche n'est pas disponible, tu peux ajouter les intervalles manuellement après coup.
         </div>
       )}
       {searchStatus === "error" && (

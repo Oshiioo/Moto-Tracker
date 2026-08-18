@@ -9,7 +9,7 @@ import { PALETTE, FONT_BODY, FONT_MONO } from "./theme/palette";
 import { CONTENT_MAX_WIDTH } from "./lib/constants";
 import { uid } from "./lib/format";
 import { DEFAULT_DATA, migrateData } from "./lib/maintenanceRules";
-import { GEMINI_API_KEY } from "./lib/gemini";
+import { GEMINI_CONFIGURED } from "./lib/gemini";
 
 import Header from "./components/layout/Header";
 import TabBar from "./components/layout/TabBar";
@@ -253,7 +253,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
             rules={data.rules}
             onAddRule={() => setShowRuleForm(true)}
             onDeleteRule={(id) => deleteItem("rules", id)}
-            apiKeyConfigured={!!GEMINI_API_KEY}
+            apiKeyConfigured={GEMINI_CONFIGURED}
             userEmail={user.email}
             onSignOut={onSignOut}
           />
@@ -281,7 +281,6 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       {showAddVehicleForm && (
         <Modal title="Ajouter une moto" onClose={() => setShowAddVehicleForm(false)}>
           <AddVehicleForm
-            apiKey={GEMINI_API_KEY}
             onSubmit={(name, currentKm, rules) => {
               onAddVehicle(name, currentKm, rules);
               setShowAddVehicleForm(false);
@@ -313,7 +312,6 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
 
       {showQuickAdd && (
         <QuickAddModal
-          apiKey={GEMINI_API_KEY}
           rules={data.rules}
           defaultKm={data.vehicle.currentKm}
           onClose={() => setShowQuickAdd(false)}

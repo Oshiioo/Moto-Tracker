@@ -3,10 +3,10 @@ import { Camera } from "lucide-react";
 import Modal from "../ui/Modal";
 import Field from "../ui/Field";
 import { PALETTE, FONT_BODY, inputStyle, submitStyle, aiButtonStyle } from "../../theme/palette";
-import { geminiExtract, fileToBase64 } from "../../lib/gemini";
+import { geminiExtract, fileToBase64, GEMINI_CONFIGURED } from "../../lib/gemini";
 import { normalizeType, EXTRA_KNOWN_TYPES } from "../../lib/typeNormalization";
 
-export default function QuickAddModal({ apiKey, rules, defaultKm, onClose, onAddFuel, onAddMaintenance }) {
+export default function QuickAddModal({ rules, defaultKm, onClose, onAddFuel, onAddMaintenance }) {
   const [stage, setStage] = useState("input"); // input | review
   const [text, setText] = useState("");
   const [status, setStatus] = useState("idle"); // idle | busy | error
@@ -46,15 +46,15 @@ Un plein d'essence évoque des litres ou de l'essence. Un entretien évoque une 
   };
 
   const runExtraction = async (payload) => {
-    if (!apiKey) {
-      setError("Clé API Gemini manquante (voir Réglages)");
+    if (!GEMINI_CONFIGURED) {
+      setError("Assistant IA non configuré (voir Réglages)");
       setStatus("error");
       return;
     }
     setStatus("busy");
     setError("");
     try {
-      const result = await geminiExtract(apiKey, payload);
+      const result = await geminiExtract(payload);
       applyResult(result);
     } catch (e) {
       setError(e.message || "Échec de l'analyse, réessaie");

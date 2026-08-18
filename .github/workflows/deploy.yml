@@ -20,7 +20,8 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_GEMINI_WORKER_URL: ${{ vars.VITE_GEMINI_WORKER_URL }}
+          VITE_GEMINI_WORKER_SECRET: ${{ secrets.VITE_GEMINI_WORKER_SECRET }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
