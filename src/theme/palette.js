@@ -21,6 +21,21 @@ export const FONT_MONO = "'JetBrains Mono', monospace";
 export const statusColor = (status) =>
   status === "overdue" ? PALETTE.danger : status === "soon" ? PALETTE.yellow : PALETTE.ok;
 
+// Palette catégorielle pour distinguer plusieurs motos (dashboard multi-motos).
+// 3 teintes distinctes du reste de la palette (pas de rouge/jaune/vert, déjà
+// pris par statusColor). Assignation par index sur les ids triés (pas de hash)
+// pour garantir des couleurs différentes tant qu'il y a 2-3 motos actives.
+export const VEHICLE_COLORS = ["#3987e5", "#d95926", "#199e70"];
+
+export const vehicleColorMap = (vehicles) => {
+  const sortedIds = [...vehicles].map((v) => v.id).sort();
+  const map = {};
+  sortedIds.forEach((id, i) => {
+    map[id] = VEHICLE_COLORS[i % VEHICLE_COLORS.length];
+  });
+  return map;
+};
+
 // Style de carte standard — remplace les triplets background/border/borderRadius
 // et le padding (p-2/p-3/p-4 incohérents) répétés dans chaque composant.
 export const cardStyle = (borderColor = PALETTE.hairline, dashed = false) => ({

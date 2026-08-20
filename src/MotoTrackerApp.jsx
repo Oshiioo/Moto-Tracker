@@ -5,11 +5,12 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
 import GlobalStyles from "./theme/GlobalStyles";
-import { PALETTE, FONT_BODY, FONT_MONO } from "./theme/palette";
+import { PALETTE, FONT_BODY, FONT_MONO, vehicleColorMap } from "./theme/palette";
 import { CONTENT_MAX_WIDTH } from "./lib/constants";
-import { uid, monthsBetween } from "./lib/format";
+import { uid } from "./lib/format";
 import { DEFAULT_DATA, migrateData } from "./lib/maintenanceRules";
 import { GEMINI_CONFIGURED } from "./lib/gemini";
+import { computeVehicleStats } from "./lib/vehicleStats";
 
 import Header from "./components/layout/Header";
 import TabBar from "./components/layout/TabBar";
@@ -114,97 +115,69 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
 
   const deleteItem = (list, id) => persist({ ...data, [list]: data[list].filter((i) => i.id !== id) });
 
-  const consumption = useMemo(() => {
-    if (!data) return [];
-    const sorted = [...data.fuel].sort((a, b) => a.km - b.km);
-    const out = [];
-    for (let i = 1; i < sorted.length; i++) {
-      const dist = sorted[i].km - sorted[i - 1].km;
-      if (dist > 0 && sorted[i].liters) {
-        out.push({
-          id: sorted[i].id,
-          date: sorted[i].date,
-          km: sorted[i].km,
-          value: (sorted[i].liters / dist) * 100,
-        });
-      }
-    }
-    return out;
-  }, [data]);
+  const activeStats = useMemo(() => computeVehicleStats(data), [data]);
+  const { consumption, maintStatus } = activeStats;
 
-  const avgConsumption = useMemo(() => {
-    if (consumption.length === 0) return null;
-    const recent = consumption.slice(-5);
-    return recent.reduce((s, c) => s + c.value, 0) / recent.length;
-  }, [consumption]);
-
-  const ownership = useMemo(() => {
-    if (!data) return null;
-    const totalCost = data.fuel.reduce((s, f) => s + (Number(f.price) || 0), 0) + data.maintenance.reduce((s, m) => s + (Number(m.cost) || 0), 0);
-    // Le coût ne couvre que ce qui a été saisi dans l'app : on rapporte le
-    // total aux km/mois écoulés depuis la 1ère saisie, pas depuis l'achat,
-    // sinon le coût/km et coût/mois sont sous-évalués si le suivi a démarré
-    // après l'achat de la moto.
-    const entries = [...data.fuel, ...data.maintenance].filter((e) => e.date);
-    if (entries.length === 0) {
-      return { totalCost, costPerKm: null, costPerMonth: null, trackedSince: null };
+  // Dashboard multi-motos : on ne charge en entier (fuel/maintenance/rules)
+  // que la moto active + les autres motos au statut "active". La clé de
+  // dépendance est une chaîne primitive (pas le tableau `vehicles`, qui change
+  // de référence à chaque persist()) pour ne refetch que quand l'ensemble des
+  // motos actives change réellement.
+  const [extraVehiclesData, setExtraVehiclesData] = useState({});
+  const otherActiveKey = useMemo(
+    () =>
+      vehicles
+        .filter((v) => v.status === "active" && v.id !== vehicleId)
+        .map((v) => v.id)
+        .sort()
+        .join(","),
+    [vehicles, vehicleId]
+  );
+  useEffect(() => {
+    const ids = otherActiveKey ? otherActiveKey.split(",") : [];
+    if (ids.length === 0) {
+      setExtraVehiclesData({});
+      return;
     }
-    const earliest = entries.reduce((a, b) => (new Date(b.date) < new Date(a.date) ? b : a));
-    const kmTracked = Math.max(0, data.vehicle.currentKm - (earliest.km ?? 0));
-    const months = monthsBetween(earliest.date);
-    return {
-      totalCost,
-      costPerKm: kmTracked > 0 ? totalCost / kmTracked : null,
-      costPerMonth: months > 0 ? totalCost / months : null,
-      trackedSince: earliest.date,
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const snap = await getDoc(doc(db, "users", user.uid, "vehicles", id));
+            return [id, snap.exists() ? migrateData(snap.data()) : null];
+          } catch (e) {
+            console.error("Erreur de chargement véhicule", id, e);
+            return [id, null];
+          }
+        })
+      );
+      if (!cancelled) setExtraVehiclesData(Object.fromEntries(entries.filter(([, d]) => d)));
+    })();
+    return () => {
+      cancelled = true;
     };
-  }, [data]);
+  }, [otherActiveKey, user.uid]);
 
-  const maintStatus = useMemo(() => {
-    if (!data) return [];
-    const currentKm = data.vehicle.currentKm;
-    const now = new Date();
-    return data.rules.map((rule) => {
-      const done = data.maintenance
-        .filter((m) => m.type === rule.name)
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
-      const last = done[0] || null;
-      const lastKm = last?.km ?? null;
-      const lastDate = last?.date ?? null;
-
-      let nextDueKm = null;
-      let remainingKm = null;
-      let kmStatus = null;
-      if (rule.intervalKm) {
-        if (rule.alignToGrid) {
-          // Aligné sur la grille officielle constructeur (multiples fixes de l'intervalle),
-          // indépendamment du kilométrage réel de la dernière intervention
-          nextDueKm = Math.ceil(currentKm / rule.intervalKm) * rule.intervalKm;
-          if (nextDueKm === 0) nextDueKm = rule.intervalKm;
-        } else {
-          nextDueKm = (lastKm ?? 0) + rule.intervalKm;
-        }
-        remainingKm = nextDueKm - currentKm;
-        kmStatus = remainingKm <= 0 ? "overdue" : remainingKm <= rule.intervalKm * 0.1 ? "soon" : "ok";
-      }
-
-      let nextDueDate = null;
-      let remainingDays = null;
-      let dateStatus = null;
-      if (rule.intervalMonths) {
-        const base = lastDate ? new Date(lastDate) : now;
-        nextDueDate = new Date(base);
-        nextDueDate.setMonth(nextDueDate.getMonth() + rule.intervalMonths);
-        remainingDays = Math.round((nextDueDate - now) / (1000 * 60 * 60 * 24));
-        dateStatus = remainingDays <= 0 ? "overdue" : remainingDays <= 30 ? "soon" : "ok";
-      }
-
-      const statuses = [kmStatus, dateStatus].filter(Boolean);
-      const status = statuses.includes("overdue") ? "overdue" : statuses.includes("soon") ? "soon" : "ok";
-
-      return { ...rule, lastKm, lastDate, nextDueKm, remainingKm, nextDueDate, remainingDays, status };
-    });
-  }, [data]);
+  const dashboardVehicles = useMemo(() => {
+    const active = vehicles.filter((v) => v.status === "active");
+    const colorMap = vehicleColorMap(active);
+    return active
+      .map((v) => {
+        const fullData = v.id === vehicleId ? data : extraVehiclesData[v.id];
+        if (!fullData) return null; // pas encore chargée
+        const stats = v.id === vehicleId ? activeStats : computeVehicleStats(fullData);
+        return {
+          id: v.id,
+          name: v.name,
+          color: colorMap[v.id],
+          fuelCount: fullData.fuel.length,
+          maintCount: fullData.maintenance.length,
+          ...stats,
+        };
+      })
+      .filter(Boolean);
+  }, [vehicles, vehicleId, data, extraVehiclesData, activeStats]);
 
   if (!ready || !data) {
     return (
@@ -244,16 +217,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       >
         <div key={tab} style={{ animation: "tabContentIn 200ms ease" }}>
           {tab === "dashboard" && (
-            <Dashboard
-              avgConsumption={avgConsumption}
-              consumption={consumption}
-              maintStatus={maintStatus}
-              fuelCount={data.fuel.length}
-              maintCount={data.maintenance.length}
-              onGoMaint={() => setTab("maintenance")}
-              vehicles={vehicles}
-              ownership={ownership}
-            />
+            <Dashboard vehiclesData={dashboardVehicles} vehicles={vehicles} onGoMaint={() => setTab("maintenance")} />
           )}
 
           {tab === "fuel" && (

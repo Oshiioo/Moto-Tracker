@@ -1,9 +1,10 @@
+import { useMemo } from "react";
 import { CheckCircle2, LogOut } from "lucide-react";
 import SectionHeader from "../ui/SectionHeader";
 import Card from "../ui/Card";
 import GarageRow from "../garage/GarageRow";
 import VehicleEditor from "../garage/VehicleEditor";
-import { PALETTE, FONT_DISPLAY, FONT_BODY, FONT_MONO, cardStyle } from "../../theme/palette";
+import { PALETTE, FONT_DISPLAY, FONT_BODY, FONT_MONO, cardStyle, vehicleColorMap } from "../../theme/palette";
 import { fmtKm } from "../../lib/format";
 
 export default function SettingsTab({
@@ -22,6 +23,7 @@ export default function SettingsTab({
   userEmail,
   onSignOut,
 }) {
+  const colorMap = useMemo(() => vehicleColorMap(vehicles.filter((v) => v.status === "active")), [vehicles]);
   return (
     <div className="mt-2 space-y-6">
       <div>
@@ -38,6 +40,7 @@ export default function SettingsTab({
               onSwitch={() => onSwitchVehicle(v.id)}
               onDelete={() => onDeleteVehicle(v.id)}
               deletable={vehicles.length > 1}
+              color={colorMap[v.id]}
             />
           ))}
         </div>
