@@ -20,13 +20,7 @@ export default function QuickAddModal({ rules, defaultKm, onClose, onAddFuel, on
   const recognitionRef = useRef(null);
   const baseTextRef = useRef("");
 
-  useEffect(() => () => recognitionRef.current?.stop(), []);
-
-  const toggleListening = () => {
-    if (listening) {
-      recognitionRef.current?.stop();
-      return;
-    }
+  const startListening = () => {
     const recognition = new SpeechRecognitionCtor();
     recognition.lang = "fr-FR";
     recognition.interimResults = true;
@@ -50,6 +44,22 @@ export default function QuickAddModal({ rules, defaultKm, onClose, onAddFuel, on
     setError("");
     recognition.start();
   };
+
+  const toggleListening = () => {
+    if (listening) {
+      recognitionRef.current?.stop();
+    } else {
+      startListening();
+    }
+  };
+
+  // Démarre l'écoute automatiquement à l'ouverture — la modale n'a que cet
+  // usage (dictée rapide), pas besoin d'un tap supplémentaire ni du clavier.
+  useEffect(() => {
+    if (SpeechRecognitionCtor) startListening();
+    return () => recognitionRef.current?.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const ruleNames = rules.map((r) => r.name);
   const pickerRuleNames = rules.filter((r) => !r.hideFromPicker).map((r) => r.name);
@@ -160,7 +170,6 @@ Un plein d'essence évoque des litres ou de l'essence. Un entretien évoque une 
             placeholder="Ex. « plein de 12 litres, 22 euros, 69 100 kilomètres » ou « graissage chaîne fait aujourd'hui »"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            autoFocus
           />
           <div className="flex gap-2 mt-3">
             <button
