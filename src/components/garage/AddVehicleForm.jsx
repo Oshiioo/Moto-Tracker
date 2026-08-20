@@ -21,12 +21,19 @@ const GENERIC_SUGGESTIONS = [
   { name: "Entretien annuel", intervalMonths: 12 },
 ];
 
-const toSuggestion = (it) => ({
+const SOURCE_LABELS = {
+  generic: { label: "générique", color: PALETTE.textMuted },
+  brand: { label: "estimé marque", color: PALETTE.yellow },
+  model: { label: "modèle", color: PALETTE.ok },
+};
+
+const toSuggestion = (it, source = "generic") => ({
   id: uid(),
   name: it.name,
   intervalKm: it.intervalKm || "",
   intervalMonths: it.intervalMonths || "",
   checked: true,
+  source,
 });
 
 // Complète la liste courante avec les résultats IA : met à jour l'intervalle
@@ -36,10 +43,11 @@ const mergeSuggestions = (current, items) => {
   const next = [...current];
   for (const it of items) {
     if (!it.name || (!it.intervalKm && !it.intervalMonths)) continue;
+    const source = it.source === "brand" ? "brand" : "model";
     const matchedName = normalizeType(it.name, next.map((s) => s.name));
     const idx = next.findIndex((s) => s.name === matchedName);
-    if (idx >= 0) next[idx] = { ...next[idx], intervalKm: it.intervalKm || "", intervalMonths: it.intervalMonths || "", checked: true };
-    else next.push(toSuggestion(it));
+    if (idx >= 0) next[idx] = { ...next[idx], intervalKm: it.intervalKm || "", intervalMonths: it.intervalMonths || "", checked: true, source };
+    else next.push(toSuggestion(it, source));
   }
   return next;
 };
@@ -59,9 +67,14 @@ export default function AddVehicleForm({ onSubmit }) {
   const runSearch = async () => {
     setSearchStatus("busy");
     setSearchError("");
-    const promptText = `Cherche sur le web les préconisations d'entretien constructeur (plan de maintenance officiel) pour une moto ${brand.trim()} ${model.trim()} ${year.trim()}. Réponds uniquement avec un objet JSON strict, sans texte ni markdown autour, de cette forme exacte :
-{"items": [{"name": "Vidange", "intervalKm": 12000, "intervalMonths": null}, ...]}
-Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, Bougies, Graissage de la chaîne, Tension de la chaîne, Contrôle plaquettes et disques, Purge des liquides de frein, Liquide de refroidissement, Entretien annuel — sinon un nom court et clair. intervalKm et intervalMonths sont des nombres ou null (au moins un des deux renseigné par entrée). Si tu ne trouves pas de valeur constructeur fiable pour un poste, ignore-le plutôt que d'inventer un chiffre.`;
+    const promptText = `Cherche sur le web les préconisations d'entretien constructeur pour une moto ${brand.trim()} ${model.trim()} ${year.trim()}.
+Pour chaque poste d'entretien, applique cet ordre de priorité :
+1. Si tu trouves l'intervalle officiel du plan de maintenance de ce modèle précis, utilise-le avec "source": "model".
+2. Sinon, si tu connais l'intervalle générique/typique pratiqué par la marque ${brand.trim()} sur sa gamme (ex. beaucoup de BMW routent à 10 000 km, beaucoup de Honda à 12 000 km), utilise-le avec "source": "brand".
+3. Si tu n'as ni l'un ni l'autre avec un minimum de confiance, ignore ce poste plutôt que d'inventer un chiffre.
+Réponds uniquement avec un objet JSON strict, sans texte ni markdown autour, de cette forme exacte :
+{"items": [{"name": "Vidange", "intervalKm": 12000, "intervalMonths": null, "source": "model"}, ...]}
+Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, Bougies, Graissage de la chaîne, Tension de la chaîne, Contrôle plaquettes et disques, Purge des liquides de frein, Liquide de refroidissement, Entretien annuel — sinon un nom court et clair. intervalKm et intervalMonths sont des nombres ou null (au moins un des deux renseigné par entrée).`;
     try {
       const result = await geminiSearchExtract(promptText);
       const items = Array.isArray(result?.items) ? result.items : [];
@@ -170,6 +183,17 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
                     value={s.name}
                     onChange={(e) => updateSuggestion(s.id, { name: e.target.value })}
                   />
+                  <span
+                    style={{
+                      fontFamily: FONT_BODY,
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: SOURCE_LABELS[s.source]?.color || PALETTE.textMuted,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {SOURCE_LABELS[s.source]?.label || "générique"}
+                  </span>
                 </label>
                 <div className="flex gap-2 pl-6">
                   <input
