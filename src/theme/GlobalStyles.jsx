@@ -4,16 +4,22 @@ export default function GlobalStyles() {
   return (
     <style>{`
       @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap');
-      * { box-sizing: border-box; }
       html, body, #root { height: 100% !important; margin: 0 !important; }
       body { display: block !important; place-items: unset !important; min-width: 0 !important; line-height: 1.4; }
       textarea { line-height: 1.4; }
       #root { max-width: none !important; padding: 0 !important; text-align: left !important; }
-      button { background: none; border: none; font: inherit; color: inherit; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; transition: transform 100ms ease; }
-      button:active { transform: scale(0.96); }
-      input, select { outline: none; }
-      input:focus, select:focus { border-color: ${PALETTE.amber} !important; }
-      ::placeholder { color: ${PALETTE.steelDim}; }
+
+      /* Dans une @layer pour que les utilitaires Tailwind (ex. px-4 sur un
+         bouton) restent prioritaires sur ces resets, au lieu d'un CSS non
+         layé qui gagne toujours quelle que soit la spécificité. */
+      @layer base {
+        * { box-sizing: border-box; }
+        button { background: none; border: none; font: inherit; color: inherit; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; transition: transform 100ms ease; }
+        button:active { transform: scale(0.96); }
+        input, select { outline: none; }
+        input:focus, select:focus { border-color: ${PALETTE.amber} !important; }
+        ::placeholder { color: ${PALETTE.steelDim}; }
+      }
 
       @keyframes modalBackdropIn { from { opacity: 0; } to { opacity: 1; } }
       @keyframes modalPanelIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }

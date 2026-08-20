@@ -8,17 +8,20 @@ export default function SectionHeader({ title, onAdd, addLabel }) {
       <button
         onClick={onAdd}
         style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
           background: PALETTE.amber,
           color: "#1B1A17",
           fontFamily: FONT_BODY,
-          fontWeight: 600,
+          fontWeight: 700,
           fontSize: 13,
-          borderRadius: 999,
+          borderRadius: 10,
+          padding: "10px 16px",
           boxShadow: `0 2px 10px ${PALETTE.amber}4D`,
         }}
-        className="flex items-center gap-1.5 px-4 py-2.5"
       >
-        <Plus size={15} /> {addLabel}
+        <Plus size={16} strokeWidth={2.5} /> {addLabel}
       </button>
     </div>
   );
