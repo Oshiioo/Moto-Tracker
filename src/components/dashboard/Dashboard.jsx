@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, Cell } from "recharts";
 import { CheckCircle2, ChevronDown, LineChart as LineChartIcon } from "lucide-react";
 import StatCard from "./StatCard";
 import AlertRow from "./AlertRow";
@@ -315,9 +315,8 @@ function ConsommationCard({ allVehicles, defaultId }) {
         <div style={{ height: 140, position: "relative" }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={EMPTY_CHART_PLACEHOLDER} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid stroke={PALETTE.hairline} strokeDasharray="4 4" />
-              <XAxis dataKey="km" tick={false} axisLine={false} tickLine={false} />
-              <YAxis tick={false} axisLine={false} tickLine={false} width={30} />
+              <XAxis dataKey="km" tick={false} tickLine={false} axisLine={{ stroke: PALETTE.hairline }} />
+              <YAxis tick={false} tickLine={false} axisLine={false} width={30} />
             </LineChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-2">
