@@ -46,30 +46,32 @@ export default function SettingsTab({
         </div>
       </div>
 
-      <div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-3">
-          Ma moto
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <div>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-3">
+            Ma moto
+          </div>
+          <VehicleEditor vehicle={vehicle} onUpdate={onUpdateVehicle} />
         </div>
-        <VehicleEditor vehicle={vehicle} onUpdate={onUpdateVehicle} />
-      </div>
 
-      <div>
-        <SectionHeader title="Intervalles d'entretien" onAdd={onAddRule} addLabel="Nouveau type" />
-        <div className="space-y-2">
-          {rules.map((r) => (
-            <Card key={r.id} onDelete={() => onDeleteRule(r.id)} confirmLabel={`le suivi « ${r.name} » (et son rappel associé)`}>
-              <button type="button" onClick={() => onEditRule(r)} style={{ width: "100%", textAlign: "left", display: "block" }}>
-                <div className="flex justify-between items-center">
-                  <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{r.name}</span>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
-                    {[r.intervalKm ? `${fmtKm(r.intervalKm)} km` : null, r.intervalMonths ? `${r.intervalMonths} mois` : null]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </div>
-              </button>
-            </Card>
-          ))}
+        <div>
+          <SectionHeader title="Intervalles d'entretien" onAdd={onAddRule} addLabel="Nouveau type" />
+          <div className="space-y-2">
+            {rules.map((r) => (
+              <Card key={r.id} onDelete={() => onDeleteRule(r.id)} confirmLabel={`le suivi « ${r.name} » (et son rappel associé)`}>
+                <button type="button" onClick={() => onEditRule(r)} style={{ width: "100%", textAlign: "left", display: "block" }}>
+                  <div className="flex justify-between items-center">
+                    <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{r.name}</span>
+                    <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
+                      {[r.intervalKm ? `${fmtKm(r.intervalKm)} km` : null, r.intervalMonths ? `${r.intervalMonths} mois` : null]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </div>
+                </button>
+              </Card>
+            ))}
+          </div>
         </div>
       </div>
 
