@@ -10,12 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "firebase": "^12.16.0",
     "lucide-react": "^1.27.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.2",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",

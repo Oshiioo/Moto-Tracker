@@ -6,13 +6,13 @@ import { PALETTE, cardStyle } from "../../theme/palette";
 export default function Card({ children, onDelete, confirmLabel = "cette entrée" }) {
   const [confirming, setConfirming] = useState(false);
   return (
-    <div style={cardStyle()} className="relative group">
+    <div style={{ ...cardStyle(), paddingRight: 40 }} className="relative">
       {children}
       <button
         onClick={() => setConfirming(true)}
         aria-label="Supprimer"
         style={{ color: PALETTE.steelDim }}
-        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-4 right-4"
       >
         <Trash2 size={14} />
       </button>
