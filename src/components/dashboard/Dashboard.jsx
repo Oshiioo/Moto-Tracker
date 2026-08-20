@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, Cell } from "recharts";
-import { CheckCircle2, ChevronDown } from "lucide-react";
+import { CheckCircle2, ChevronDown, LineChart as LineChartIcon } from "lucide-react";
 import StatCard from "./StatCard";
 import AlertRow from "./AlertRow";
 import MiniRing from "./MiniRing";
@@ -308,7 +308,8 @@ function ConsommationCard({ allVehicles, defaultId }) {
           <div style={sectionLabelStyle}>CONSOMMATION</div>
           {switcher}
         </div>
-        <div style={{ height: 140 }} className="flex items-center justify-center text-center">
+        <div style={{ height: 140 }} className="flex flex-col items-center justify-center text-center gap-2">
+          <LineChartIcon size={28} color={PALETTE.steelDim} strokeWidth={1.5} />
           <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.textMuted, maxWidth: 220 }}>
             Pas encore assez de pleins enregistrés pour calculer une consommation.
           </div>
