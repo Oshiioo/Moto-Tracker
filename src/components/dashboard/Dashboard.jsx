@@ -303,12 +303,15 @@ function ConsommationCard({ allVehicles, defaultId }) {
 
   if (withConsumption.length === 0) {
     return (
-      <div key={valid} style={{ ...cardStyle(PALETTE.hairline, true), animation: "tabContentIn 200ms ease" }}>
-        <div className="flex items-start justify-between">
-          <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
+      <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+        <div className="flex items-start justify-between mb-3">
+          <div style={sectionLabelStyle}>CONSOMMATION</div>
+          {switcher}
+        </div>
+        <div style={{ height: 140 }} className="flex items-center justify-center text-center">
+          <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.textMuted, maxWidth: 220 }}>
             Pas encore assez de pleins enregistrés pour calculer une consommation.
           </div>
-          {switcher}
         </div>
       </div>
     );
