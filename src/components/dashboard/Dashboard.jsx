@@ -10,9 +10,20 @@ import { ruleProgress } from "../../lib/maintenanceRules";
 
 const Dot = ({ color }) => <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />;
 
+// Résout la sélection propre à une carte : soit une moto précise, soit
+// "all". Auto-guérison si la moto choisie disparaît (suppression) — retombe
+// sur "all" sans effet de synchronisation, recalculé à chaque rendu.
+function useVehicleView(allVehicles, defaultId) {
+  const [viewMode, setViewMode] = useState(defaultId);
+  const valid = viewMode !== "all" && !allVehicles.some((v) => v.id === viewMode) ? "all" : viewMode;
+  const resolved = valid === "all" ? allVehicles : allVehicles.filter((v) => v.id === valid);
+  return [resolved, valid, setViewMode];
+}
+
 // Label point coloré + nom, dans le coin d'une carte. Cliquable dès qu'il y a
-// plus d'une moto : ouvre un petit menu pour choisir une autre moto ou
-// "Toutes les motos", sans jamais toucher à la moto active de l'app.
+// plus d'une moto : ouvre un petit menu pour choisir une autre moto (active,
+// vendue ou archivée) ou "Toutes les motos". Chaque carte a son propre état —
+// changer une carte ne touche ni les autres cartes ni la moto active de l'app.
 function VehicleSwitcher({ vehicles, value, onChange }) {
   const [open, setOpen] = useState(false);
 
@@ -51,6 +62,8 @@ function VehicleSwitcher({ vehicles, value, onChange }) {
               borderRadius: 8,
               padding: 4,
               minWidth: 150,
+              maxHeight: 220,
+              overflowY: "auto",
               boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
             }}
           >
@@ -123,265 +136,258 @@ function buildConsumptionSeries(vehicles) {
   });
 }
 
-function SingleVehicleDashboard({ v, allVehicles, viewMode, onChangeView, onGoMaint }) {
-  const { avgConsumption, consumption, maintStatus, fuelCount, maintCount, ownership } = v;
-  const overdue = maintStatus.filter((m) => m.status === "overdue");
-  const soon = maintStatus.filter((m) => m.status === "soon");
+function ConsoStatCard({ allVehicles, defaultId }) {
+  const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  if (resolved.length === 0) return null;
+  const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
 
-  const bestTank = consumption.length >= 2 ? consumption.reduce((a, b) => (b.value < a.value ? b : a)) : null;
-  const worstTank = consumption.length >= 2 ? consumption.reduce((a, b) => (b.value > a.value ? b : a)) : null;
-
-  const topMaint = [...maintStatus]
-    .filter((r) => r.intervalKm || r.intervalMonths)
-    .sort((a, b) => ruleProgress(b) - ruleProgress(a))
-    .slice(0, 4);
-
-  const Switcher = () => <VehicleSwitcher vehicles={allVehicles} value={viewMode} onChange={onChangeView} />;
-
-  return (
-    <>
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Conso. moyenne" value={avgConsumption ? avgConsumption.toFixed(1) : "—"} unit="L/100km" tag={<Switcher />} />
-        <StatCard label="Pleins enregistrés" value={fuelCount} unit={fuelCount > 1 ? "entrées" : "entrée"} tag={<Switcher />} />
-      </div>
-
-      {ownership && (fuelCount > 0 || maintCount > 0) && (
-        <div style={cardStyle()}>
-          <div className="flex items-start justify-between mb-3">
-            <div style={sectionLabelStyle}>
-              COÛT DE SUIVI{ownership.trackedSince ? ` · DEPUIS LE ${fmtDate(ownership.trackedSince).toUpperCase()}` : ""}
-            </div>
-            <Switcher />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 17, fontWeight: 700, color: PALETTE.text }}>{fmtEuro(ownership.totalCost, 0)}</div>
-              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Total</div>
-            </div>
-            <div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 17, fontWeight: 700, color: PALETTE.text }}>
-                {ownership.costPerKm != null ? fmtEuro(ownership.costPerKm) : "—"}
-              </div>
-              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Par km</div>
-            </div>
-            <div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 17, fontWeight: 700, color: PALETTE.text }}>
-                {ownership.costPerMonth != null ? fmtEuro(ownership.costPerMonth, 0) : "—"}
-              </div>
-              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Par mois</div>
-            </div>
-          </div>
-          <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mt-2">
-            Basé sur les pleins et entretiens enregistrés dans l'app, pas sur toute la durée de possession.
-          </div>
-        </div>
-      )}
-
-      {consumption.length >= 2 && (
-        <div style={cardStyle()}>
-          <div className="flex items-start justify-between mb-3">
-            <div style={sectionLabelStyle}>CONSOMMATION</div>
-            <Switcher />
-          </div>
-          <div style={{ height: 140 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={consumption.map((c) => ({ km: c.km, value: Number(c.value.toFixed(1)) }))} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                <XAxis dataKey="km" tickFormatter={fmtKm} stroke={PALETTE.textMuted} fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke={PALETTE.textMuted} fontSize={10} tickLine={false} axisLine={false} width={30} />
-                <Tooltip
-                  contentStyle={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: PALETTE.textMuted }}
-                  itemStyle={{ color: PALETTE.text }}
-                  labelFormatter={(km) => `${fmtKm(km)} km`}
-                  formatter={(v) => [`${v} L/100km`, "Conso"]}
-                />
-                <Line type="monotone" dataKey="value" stroke={PALETTE.amber} strokeWidth={2} dot={{ r: 3, fill: PALETTE.amber }} animationDuration={500} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-between mt-3 pt-3" style={{ borderTop: `1px solid ${PALETTE.hairline}` }}>
-            <div>
-              <div style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: PALETTE.ok }}>{bestTank.value.toFixed(1)} L/100km</div>
-              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Meilleur plein · {fmtKm(bestTank.km)} km</div>
-            </div>
-            <div className="text-right">
-              <div style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: PALETTE.danger }}>{worstTank.value.toFixed(1)} L/100km</div>
-              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Pire plein · {fmtKm(worstTank.km)} km</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {(overdue.length > 0 || soon.length > 0) && (
-        <div style={cardStyle()}>
-          <div className="flex items-start justify-between mb-3">
-            <div style={sectionLabelStyle}>À SURVEILLER</div>
-            <Switcher />
-          </div>
-
-          <div className="flex justify-around mb-4">
-            {topMaint.map((r) => (
-              <MiniRing key={r.id} percent={ruleProgress(r)} color={statusColor(r.status)} label={r.name} />
-            ))}
-          </div>
-
-          <div className="space-y-2">
-            {overdue.map((m) => (
-              <AlertRow key={m.id} rule={m} />
-            ))}
-            {soon.map((m) => (
-              <AlertRow key={m.id} rule={m} />
-            ))}
-          </div>
-          <button onClick={onGoMaint} style={{ color: PALETTE.amberSoft, fontFamily: FONT_BODY, fontSize: 13 }} className="mt-3 font-medium">
-            Voir l'entretien →
-          </button>
-        </div>
-      )}
-
-      {overdue.length === 0 && soon.length === 0 && maintCount > 0 && (
-        <div style={cardStyle()}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 size={20} color={PALETTE.ok} />
-              <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
-                Tout l'entretien est à jour.
-              </div>
-            </div>
-            <Switcher />
-          </div>
-          {topMaint.length > 0 && (
-            <div className="flex justify-around">
-              {topMaint.map((r) => (
-                <MiniRing key={r.id} percent={ruleProgress(r)} color={statusColor(r.status)} label={r.name} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {maintCount === 0 && (
-        <div style={cardStyle(PALETTE.hairline, true)}>
-          <div className="flex items-start justify-between">
-            <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
-              Aucun entretien enregistré pour l'instant. Ajoute ta dernière vidange ou révision pour démarrer le suivi.
-            </div>
-            <Switcher />
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-function MultiVehicleDashboard({ vehicles, allVehicles, viewMode, onChangeView, onGoMaint }) {
-  const totalCost = vehicles.reduce((s, v) => s + (v.ownership?.totalCost || 0), 0);
-  const showCost = vehicles.some((v) => v.fuelCount > 0 || v.maintCount > 0);
-  const series = useMemo(() => buildConsumptionSeries(vehicles.filter((v) => v.consumption.length >= 2)), [vehicles]);
-  const withConsumption = vehicles.filter((v) => v.consumption.length >= 2);
-
-  const Switcher = () => <VehicleSwitcher vehicles={allVehicles} value={viewMode} onChange={onChangeView} />;
-
-  return (
-    <>
+  const content =
+    resolved.length === 1 ? (
+      <StatCard label="Conso. moyenne" value={resolved[0].avgConsumption ? resolved[0].avgConsumption.toFixed(1) : "—"} unit="L/100km" tag={switcher} />
+    ) : (
       <div style={cardStyle()}>
         <div className="flex items-start justify-between mb-3">
-          <div style={sectionLabelStyle}>CONSO. MOYENNE & PLEINS</div>
-          <Switcher />
+          <div style={sectionLabelStyle}>CONSO. MOYENNE</div>
+          {switcher}
         </div>
-        <div className="space-y-3">
-          {vehicles.map((v) => (
+        <div className="space-y-2">
+          {resolved.map((v) => (
             <div key={v.id} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Dot color={v.color} />
-                <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{v.name}</span>
+                <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>{v.name}</span>
               </div>
-              <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
-                {v.avgConsumption ? `${v.avgConsumption.toFixed(1)} L/100km` : "—"} · {v.fuelCount} {v.fuelCount > 1 ? "pleins" : "plein"}
+              <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>
+                {v.avgConsumption ? `${v.avgConsumption.toFixed(1)} L/100km` : "—"}
               </span>
             </div>
           ))}
         </div>
       </div>
+    );
 
-      {showCost && (
-        <div style={cardStyle()}>
-          <div className="flex items-start justify-between mb-3">
-            <div style={sectionLabelStyle}>COÛT DE SUIVI</div>
-            <Switcher />
-          </div>
-          <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: PALETTE.text }}>{fmtEuro(totalCost, 0)}</div>
-          <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mb-3">
-            Total cumulé, motos sélectionnées
-          </div>
-          <div className="space-y-2 pt-2" style={{ borderTop: `1px solid ${PALETTE.hairline}` }}>
-            {vehicles.map((v) => (
-              <div key={v.id} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Dot color={v.color} />
-                  <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>{v.name}</span>
-                </div>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>
-                  {fmtEuro(v.ownership?.totalCost || 0, 0)}
-                  {v.ownership?.costPerKm != null ? ` · ${fmtEuro(v.ownership.costPerKm)}/km` : ""}
-                  {v.ownership?.costPerMonth != null ? ` · ${fmtEuro(v.ownership.costPerMonth, 0)}/mois` : ""}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+  return (
+    <div key={valid} style={{ animation: "tabContentIn 200ms ease" }}>
+      {content}
+    </div>
+  );
+}
 
-      {series.length >= 2 && (
-        <div style={cardStyle()}>
-          <div className="flex items-start justify-between mb-3">
-            <div style={sectionLabelStyle}>CONSOMMATION</div>
-            <Switcher />
-          </div>
-          <div style={{ height: 140 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={series} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                <XAxis dataKey="date" tickFormatter={(d) => fmtDate(d)} stroke={PALETTE.textMuted} fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke={PALETTE.textMuted} fontSize={10} tickLine={false} axisLine={false} width={30} />
-                <Tooltip
-                  contentStyle={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: PALETTE.textMuted }}
-                  labelFormatter={(d) => fmtDate(d)}
-                  formatter={(v, name) => [`${v} L/100km`, name]}
-                />
-                {withConsumption.map((v) => (
-                  <Line key={v.id} type="monotone" dataKey={v.id} name={v.name} stroke={v.color} strokeWidth={2} dot={{ r: 3, fill: v.color }} connectNulls animationDuration={500} />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="space-y-2 mt-3 pt-3" style={{ borderTop: `1px solid ${PALETTE.hairline}` }}>
-            {withConsumption.map((v) => {
-              const best = v.consumption.reduce((a, b) => (b.value < a.value ? b : a));
-              const worst = v.consumption.reduce((a, b) => (b.value > a.value ? b : a));
-              return (
-                <div key={v.id} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Dot color={v.color} />
-                    <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>{v.name}</span>
-                  </div>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>
-                    <span style={{ color: PALETTE.ok }}>{best.value.toFixed(1)}</span> / <span style={{ color: PALETTE.danger }}>{worst.value.toFixed(1)}</span> L/100km
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+function PleinsStatCard({ allVehicles, defaultId }) {
+  const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  if (resolved.length === 0) return null;
+  const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
 
+  const content =
+    resolved.length === 1 ? (
+      <StatCard label="Pleins enregistrés" value={resolved[0].fuelCount} unit={resolved[0].fuelCount > 1 ? "entrées" : "entrée"} tag={switcher} />
+    ) : (
       <div style={cardStyle()}>
         <div className="flex items-start justify-between mb-3">
+          <div style={sectionLabelStyle}>PLEINS ENREGISTRÉS</div>
+          {switcher}
+        </div>
+        <div className="space-y-2">
+          {resolved.map((v) => (
+            <div key={v.id} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Dot color={v.color} />
+                <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>{v.name}</span>
+              </div>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>
+                {v.fuelCount} {v.fuelCount > 1 ? "pleins" : "plein"}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
+  return (
+    <div key={valid} style={{ animation: "tabContentIn 200ms ease" }}>
+      {content}
+    </div>
+  );
+}
+
+function CoutDeSuiviCard({ allVehicles, defaultId }) {
+  const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  const withData = resolved.filter((v) => v.fuelCount > 0 || v.maintCount > 0);
+  if (withData.length === 0) return null;
+  const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
+
+  if (resolved.length === 1) {
+    const v = resolved[0];
+    const { ownership } = v;
+    return (
+      <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+        <div className="flex items-start justify-between mb-3">
+          <div style={sectionLabelStyle}>
+            COÛT DE SUIVI{ownership.trackedSince ? ` · DEPUIS LE ${fmtDate(ownership.trackedSince).toUpperCase()}` : ""}
+          </div>
+          {switcher}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 17, fontWeight: 700, color: PALETTE.text }}>{fmtEuro(ownership.totalCost, 0)}</div>
+            <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Total</div>
+          </div>
+          <div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 17, fontWeight: 700, color: PALETTE.text }}>
+              {ownership.costPerKm != null ? fmtEuro(ownership.costPerKm) : "—"}
+            </div>
+            <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Par km</div>
+          </div>
+          <div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 17, fontWeight: 700, color: PALETTE.text }}>
+              {ownership.costPerMonth != null ? fmtEuro(ownership.costPerMonth, 0) : "—"}
+            </div>
+            <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Par mois</div>
+          </div>
+        </div>
+        <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mt-2">
+          Basé sur les pleins et entretiens enregistrés dans l'app, pas sur toute la durée de possession.
+        </div>
+      </div>
+    );
+  }
+
+  const totalCost = resolved.reduce((s, v) => s + (v.ownership?.totalCost || 0), 0);
+  return (
+    <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+      <div className="flex items-start justify-between mb-3">
+        <div style={sectionLabelStyle}>COÛT DE SUIVI</div>
+        {switcher}
+      </div>
+      <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: PALETTE.text }}>{fmtEuro(totalCost, 0)}</div>
+      <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mb-3">
+        Total cumulé, toutes motos
+      </div>
+      <div className="space-y-2 pt-2" style={{ borderTop: `1px solid ${PALETTE.hairline}` }}>
+        {resolved.map((v) => (
+          <div key={v.id} className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Dot color={v.color} />
+              <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>{v.name}</span>
+            </div>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>
+              {fmtEuro(v.ownership?.totalCost || 0, 0)}
+              {v.ownership?.costPerKm != null ? ` · ${fmtEuro(v.ownership.costPerKm)}/km` : ""}
+              {v.ownership?.costPerMonth != null ? ` · ${fmtEuro(v.ownership.costPerMonth, 0)}/mois` : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ConsommationCard({ allVehicles, defaultId }) {
+  const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  const withConsumption = resolved.filter((v) => v.consumption.length >= 2);
+  if (withConsumption.length === 0) return null;
+  const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
+
+  if (resolved.length === 1) {
+    const v = resolved[0];
+    const { consumption } = v;
+    const bestTank = consumption.reduce((a, b) => (b.value < a.value ? b : a));
+    const worstTank = consumption.reduce((a, b) => (b.value > a.value ? b : a));
+    return (
+      <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+        <div className="flex items-start justify-between mb-3">
+          <div style={sectionLabelStyle}>CONSOMMATION</div>
+          {switcher}
+        </div>
+        <div style={{ height: 140 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={consumption.map((c) => ({ km: c.km, value: Number(c.value.toFixed(1)) }))} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+              <XAxis dataKey="km" tickFormatter={fmtKm} stroke={PALETTE.textMuted} fontSize={10} tickLine={false} axisLine={false} />
+              <YAxis stroke={PALETTE.textMuted} fontSize={10} tickLine={false} axisLine={false} width={30} />
+              <Tooltip
+                contentStyle={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8, fontSize: 12 }}
+                labelStyle={{ color: PALETTE.textMuted }}
+                itemStyle={{ color: PALETTE.text }}
+                labelFormatter={(km) => `${fmtKm(km)} km`}
+                formatter={(v) => [`${v} L/100km`, "Conso"]}
+              />
+              <Line type="monotone" dataKey="value" stroke={PALETTE.amber} strokeWidth={2} dot={{ r: 3, fill: PALETTE.amber }} animationDuration={500} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex justify-between mt-3 pt-3" style={{ borderTop: `1px solid ${PALETTE.hairline}` }}>
+          <div>
+            <div style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: PALETTE.ok }}>{bestTank.value.toFixed(1)} L/100km</div>
+            <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Meilleur plein · {fmtKm(bestTank.km)} km</div>
+          </div>
+          <div className="text-right">
+            <div style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: PALETTE.danger }}>{worstTank.value.toFixed(1)} L/100km</div>
+            <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Pire plein · {fmtKm(worstTank.km)} km</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const series = buildConsumptionSeries(withConsumption);
+  return (
+    <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+      <div className="flex items-start justify-between mb-3">
+        <div style={sectionLabelStyle}>CONSOMMATION</div>
+        {switcher}
+      </div>
+      <div style={{ height: 140 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={series} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+            <XAxis dataKey="date" tickFormatter={(d) => fmtDate(d)} stroke={PALETTE.textMuted} fontSize={10} tickLine={false} axisLine={false} />
+            <YAxis stroke={PALETTE.textMuted} fontSize={10} tickLine={false} axisLine={false} width={30} />
+            <Tooltip
+              contentStyle={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8, fontSize: 12 }}
+              labelStyle={{ color: PALETTE.textMuted }}
+              labelFormatter={(d) => fmtDate(d)}
+              formatter={(v, name) => [`${v} L/100km`, name]}
+            />
+            {withConsumption.map((v) => (
+              <Line key={v.id} type="monotone" dataKey={v.id} name={v.name} stroke={v.color} strokeWidth={2} dot={{ r: 3, fill: v.color }} connectNulls animationDuration={500} />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="space-y-2 mt-3 pt-3" style={{ borderTop: `1px solid ${PALETTE.hairline}` }}>
+        {withConsumption.map((v) => {
+          const best = v.consumption.reduce((a, b) => (b.value < a.value ? b : a));
+          const worst = v.consumption.reduce((a, b) => (b.value > a.value ? b : a));
+          return (
+            <div key={v.id} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Dot color={v.color} />
+                <span style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.text }}>{v.name}</span>
+              </div>
+              <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>
+                <span style={{ color: PALETTE.ok }}>{best.value.toFixed(1)}</span> / <span style={{ color: PALETTE.danger }}>{worst.value.toFixed(1)}</span> L/100km
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ASurveillerCard({ allVehicles, defaultId, onGoMaint }) {
+  const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  if (resolved.length === 0) return null;
+  const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
+
+  if (resolved.length > 1) {
+    return (
+      <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+        <div className="flex items-start justify-between mb-3">
           <div style={sectionLabelStyle}>À SURVEILLER</div>
-          <Switcher />
+          {switcher}
         </div>
         <div className="space-y-4">
-          {vehicles.map((v) => {
+          {resolved.map((v) => {
             const overdue = v.maintStatus.filter((m) => m.status === "overdue");
             const soon = v.maintStatus.filter((m) => m.status === "soon");
             return (
@@ -415,40 +421,97 @@ function MultiVehicleDashboard({ vehicles, allVehicles, viewMode, onChangeView, 
           Voir l'entretien →
         </button>
       </div>
-    </>
+    );
+  }
+
+  const v = resolved[0];
+  const overdue = v.maintStatus.filter((m) => m.status === "overdue");
+  const soon = v.maintStatus.filter((m) => m.status === "soon");
+  const topMaint = [...v.maintStatus]
+    .filter((r) => r.intervalKm || r.intervalMonths)
+    .sort((a, b) => ruleProgress(b) - ruleProgress(a))
+    .slice(0, 4);
+
+  if (overdue.length > 0 || soon.length > 0) {
+    return (
+      <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+        <div className="flex items-start justify-between mb-3">
+          <div style={sectionLabelStyle}>À SURVEILLER</div>
+          {switcher}
+        </div>
+        <div className="flex justify-around mb-4">
+          {topMaint.map((r) => (
+            <MiniRing key={r.id} percent={ruleProgress(r)} color={statusColor(r.status)} label={r.name} />
+          ))}
+        </div>
+        <div className="space-y-2">
+          {overdue.map((m) => (
+            <AlertRow key={m.id} rule={m} />
+          ))}
+          {soon.map((m) => (
+            <AlertRow key={m.id} rule={m} />
+          ))}
+        </div>
+        <button onClick={onGoMaint} style={{ color: PALETTE.amberSoft, fontFamily: FONT_BODY, fontSize: 13 }} className="mt-3 font-medium">
+          Voir l'entretien →
+        </button>
+      </div>
+    );
+  }
+
+  if (v.maintCount > 0) {
+    return (
+      <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 size={20} color={PALETTE.ok} />
+            <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>Tout l'entretien est à jour.</div>
+          </div>
+          {switcher}
+        </div>
+        {topMaint.length > 0 && (
+          <div className="flex justify-around">
+            {topMaint.map((r) => (
+              <MiniRing key={r.id} percent={ruleProgress(r)} color={statusColor(r.status)} label={r.name} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div key={valid} style={{ ...cardStyle(PALETTE.hairline, true), animation: "tabContentIn 200ms ease" }}>
+      <div className="flex items-start justify-between">
+        <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
+          Aucun entretien enregistré pour l'instant. Ajoute ta dernière vidange ou révision pour démarrer le suivi.
+        </div>
+        {switcher}
+      </div>
+    </div>
   );
 }
 
-export default function Dashboard({ vehiclesData, vehicles, onGoMaint }) {
-  const [viewMode, setViewMode] = useState("all"); // "all" | id d'une moto précise
-
-  // Si la moto choisie a disparu (vendue/archivée entre-temps), on retombe sur
-  // "Toutes" plutôt que de garder un id fantôme — calculé à chaque rendu, pas
-  // besoin d'effet de synchronisation.
-  const validViewMode = viewMode !== "all" && !vehiclesData.some((v) => v.id === viewMode) ? "all" : viewMode;
-  const resolved = validViewMode === "all" ? vehiclesData : vehiclesData.filter((v) => v.id === validViewMode);
-
+export default function Dashboard({ vehiclesData, vehicles, activeVehicleId, onGoMaint }) {
   const parcourus = (v) => {
     const endKm = v.status === "sold" && v.finalKm != null ? v.finalKm : v.currentKm;
     return Math.max(0, endKm - (v.acquisitionKm || 0));
   };
   const totalParcourus = vehicles ? vehicles.reduce((sum, v) => sum + parcourus(v), 0) : 0;
   // Couleurs calculées uniquement sur les motos actives : garantit que les
-  // 2-3 motos actives (celles affichées dans les sections ci-dessus) ne
-  // partagent jamais la même teinte. Les motos vendues/archivées, qui
-  // n'apparaissent que dans ce graphique, restent en gris neutre.
+  // 2-3 motos actives ne partagent jamais la même teinte. Les motos
+  // vendues/archivées restent en gris neutre, y compris ici.
   const garageColorMap = useMemo(() => vehicleColorMap((vehicles || []).filter((v) => v.status === "active")), [vehicles]);
 
   return (
     <div className="space-y-4 mt-2">
-      <div key={validViewMode} style={{ animation: "tabContentIn 200ms ease" }} className="space-y-4">
-        {resolved.length === 1 && (
-          <SingleVehicleDashboard v={resolved[0]} allVehicles={vehiclesData} viewMode={validViewMode} onChangeView={setViewMode} onGoMaint={onGoMaint} />
-        )}
-        {resolved.length > 1 && (
-          <MultiVehicleDashboard vehicles={resolved} allVehicles={vehiclesData} viewMode={validViewMode} onChangeView={setViewMode} onGoMaint={onGoMaint} />
-        )}
+      <div className="grid grid-cols-2 gap-3">
+        <ConsoStatCard allVehicles={vehiclesData} defaultId={activeVehicleId} />
+        <PleinsStatCard allVehicles={vehiclesData} defaultId={activeVehicleId} />
       </div>
+      <CoutDeSuiviCard allVehicles={vehiclesData} defaultId={activeVehicleId} />
+      <ConsommationCard allVehicles={vehiclesData} defaultId={activeVehicleId} />
+      <ASurveillerCard allVehicles={vehiclesData} defaultId={activeVehicleId} onGoMaint={onGoMaint} />
 
       {vehicles && vehicles.length > 0 && (
         <div style={cardStyle()}>

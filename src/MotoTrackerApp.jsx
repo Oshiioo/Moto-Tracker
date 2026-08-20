@@ -119,22 +119,23 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
   const { consumption, maintStatus } = activeStats;
 
   // Dashboard multi-motos : on ne charge en entier (fuel/maintenance/rules)
-  // que la moto active + les autres motos au statut "active". La clé de
-  // dépendance est une chaîne primitive (pas le tableau `vehicles`, qui change
-  // de référence à chaque persist()) pour ne refetch que quand l'ensemble des
-  // motos actives change réellement.
+  // que la moto active + toutes les autres motos du garage, quel que soit
+  // leur statut — une moto vendue/archivée doit rester consultable dans le
+  // dashboard. La clé de dépendance est une chaîne primitive (pas le tableau
+  // `vehicles`, qui change de référence à chaque persist()) pour ne refetch
+  // que quand la liste des motos du garage change réellement.
   const [extraVehiclesData, setExtraVehiclesData] = useState({});
-  const otherActiveKey = useMemo(
+  const otherVehiclesKey = useMemo(
     () =>
       vehicles
-        .filter((v) => v.status === "active" && v.id !== vehicleId)
+        .filter((v) => v.id !== vehicleId)
         .map((v) => v.id)
         .sort()
         .join(","),
     [vehicles, vehicleId]
   );
   useEffect(() => {
-    const ids = otherActiveKey ? otherActiveKey.split(",") : [];
+    const ids = otherVehiclesKey ? otherVehiclesKey.split(",") : [];
     if (ids.length === 0) {
       setExtraVehiclesData({});
       return;
@@ -157,12 +158,14 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
     return () => {
       cancelled = true;
     };
-  }, [otherActiveKey, user.uid]);
+  }, [otherVehiclesKey, user.uid]);
 
   const dashboardVehicles = useMemo(() => {
-    const active = vehicles.filter((v) => v.status === "active");
-    const colorMap = vehicleColorMap(active);
-    return active
+    // Couleurs garanties distinctes uniquement pour les motos actives (2-3
+    // en simultané dans le cas réel) ; les motos vendues/archivées, qui ne
+    // servent qu'à consulter leur historique, restent en gris neutre.
+    const colorMap = vehicleColorMap(vehicles.filter((v) => v.status === "active"));
+    return vehicles
       .map((v) => {
         const fullData = v.id === vehicleId ? data : extraVehiclesData[v.id];
         if (!fullData) return null; // pas encore chargée
@@ -170,7 +173,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
         return {
           id: v.id,
           name: v.name,
-          color: colorMap[v.id],
+          color: colorMap[v.id] || PALETTE.steelDim,
           fuelCount: fullData.fuel.length,
           maintCount: fullData.maintenance.length,
           ...stats,
@@ -217,7 +220,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       >
         <div key={tab} style={{ animation: "tabContentIn 200ms ease" }}>
           {tab === "dashboard" && (
-            <Dashboard vehiclesData={dashboardVehicles} vehicles={vehicles} onGoMaint={() => setTab("maintenance")} />
+            <Dashboard vehiclesData={dashboardVehicles} vehicles={vehicles} activeVehicleId={vehicleId} onGoMaint={() => setTab("maintenance")} />
           )}
 
           {tab === "fuel" && (
