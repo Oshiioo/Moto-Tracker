@@ -1,22 +1,111 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, Cell } from "recharts";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ChevronDown } from "lucide-react";
 import StatCard from "./StatCard";
 import AlertRow from "./AlertRow";
 import MiniRing from "./MiniRing";
-import VehicleFilterChips from "./VehicleFilterChips";
 import { PALETTE, FONT_BODY, FONT_MONO, statusColor, cardStyle, sectionLabelStyle, vehicleColorMap } from "../../theme/palette";
 import { fmtKm, fmtEuro, fmtDate } from "../../lib/format";
 import { ruleProgress } from "../../lib/maintenanceRules";
 
 const Dot = ({ color }) => <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />;
 
-const CornerTag = ({ name, color }) => (
-  <div className="flex items-center gap-1">
-    <Dot color={color} />
-    <span style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, color: PALETTE.textMuted }}>{name}</span>
-  </div>
-);
+// Label point coloré + nom, dans le coin d'une carte. Cliquable dès qu'il y a
+// plus d'une moto : ouvre un petit menu pour choisir une autre moto ou
+// "Toutes les motos", sans jamais toucher à la moto active de l'app.
+function VehicleSwitcher({ vehicles, value, onChange }) {
+  const [open, setOpen] = useState(false);
+
+  if (vehicles.length <= 1) {
+    const only = vehicles[0];
+    return only ? (
+      <div className="flex items-center gap-1">
+        <Dot color={only.color} />
+        <span style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, color: PALETTE.textMuted }}>{only.name}</span>
+      </div>
+    ) : null;
+  }
+
+  const current = value !== "all" ? vehicles.find((v) => v.id === value) : null;
+
+  return (
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-1" style={{ background: "transparent", border: "none", padding: 0 }}>
+        {current && <Dot color={current.color} />}
+        <span style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, color: PALETTE.textMuted, whiteSpace: "nowrap" }}>
+          {current ? current.name : "Toutes"}
+        </span>
+        <ChevronDown size={12} color={PALETTE.textMuted} />
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} className="fixed inset-0" style={{ zIndex: 20 }} />
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 4px)",
+              right: 0,
+              zIndex: 21,
+              background: PALETTE.surfaceRaised,
+              border: `1px solid ${PALETTE.hairline}`,
+              borderRadius: 8,
+              padding: 4,
+              minWidth: 150,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                onChange("all");
+                setOpen(false);
+              }}
+              style={{
+                display: "block",
+                width: "100%",
+                textAlign: "left",
+                padding: "8px 10px",
+                borderRadius: 6,
+                fontFamily: FONT_BODY,
+                fontSize: 13,
+                fontWeight: value === "all" ? 700 : 500,
+                color: value === "all" ? PALETTE.text : PALETTE.textMuted,
+                background: value === "all" ? PALETTE.surface : "transparent",
+              }}
+            >
+              Toutes les motos
+            </button>
+            {vehicles.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => {
+                  onChange(v.id);
+                  setOpen(false);
+                }}
+                className="flex items-center gap-2"
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "8px 10px",
+                  borderRadius: 6,
+                  fontFamily: FONT_BODY,
+                  fontSize: 13,
+                  fontWeight: value === v.id ? 700 : 500,
+                  color: value === v.id ? PALETTE.text : PALETTE.textMuted,
+                  background: value === v.id ? PALETTE.surface : "transparent",
+                }}
+              >
+                <Dot color={v.color} />
+                {v.name}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 // Fusionne les séries de conso de plusieurs motos par date (les km ne sont
 // pas comparables d'une moto à l'autre) pour un graphe multi-lignes.
@@ -34,7 +123,7 @@ function buildConsumptionSeries(vehicles) {
   });
 }
 
-function SingleVehicleDashboard({ v, onGoMaint }) {
+function SingleVehicleDashboard({ v, allVehicles, viewMode, onChangeView, onGoMaint }) {
   const { avgConsumption, consumption, maintStatus, fuelCount, maintCount, ownership } = v;
   const overdue = maintStatus.filter((m) => m.status === "overdue");
   const soon = maintStatus.filter((m) => m.status === "soon");
@@ -47,11 +136,13 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
     .sort((a, b) => ruleProgress(b) - ruleProgress(a))
     .slice(0, 4);
 
+  const Switcher = () => <VehicleSwitcher vehicles={allVehicles} value={viewMode} onChange={onChangeView} />;
+
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Conso. moyenne" value={avgConsumption ? avgConsumption.toFixed(1) : "—"} unit="L/100km" tag={{ name: v.name, color: v.color }} />
-        <StatCard label="Pleins enregistrés" value={fuelCount} unit={fuelCount > 1 ? "entrées" : "entrée"} />
+        <StatCard label="Conso. moyenne" value={avgConsumption ? avgConsumption.toFixed(1) : "—"} unit="L/100km" tag={<Switcher />} />
+        <StatCard label="Pleins enregistrés" value={fuelCount} unit={fuelCount > 1 ? "entrées" : "entrée"} tag={<Switcher />} />
       </div>
 
       {ownership && (fuelCount > 0 || maintCount > 0) && (
@@ -60,7 +151,7 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
             <div style={sectionLabelStyle}>
               COÛT DE SUIVI{ownership.trackedSince ? ` · DEPUIS LE ${fmtDate(ownership.trackedSince).toUpperCase()}` : ""}
             </div>
-            <CornerTag name={v.name} color={v.color} />
+            <Switcher />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
@@ -90,7 +181,7 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
         <div style={cardStyle()}>
           <div className="flex items-start justify-between mb-3">
             <div style={sectionLabelStyle}>CONSOMMATION</div>
-            <CornerTag name={v.name} color={v.color} />
+            <Switcher />
           </div>
           <div style={{ height: 140 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -125,7 +216,7 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
         <div style={cardStyle()}>
           <div className="flex items-start justify-between mb-3">
             <div style={sectionLabelStyle}>À SURVEILLER</div>
-            <CornerTag name={v.name} color={v.color} />
+            <Switcher />
           </div>
 
           <div className="flex justify-around mb-4">
@@ -157,7 +248,7 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
                 Tout l'entretien est à jour.
               </div>
             </div>
-            <CornerTag name={v.name} color={v.color} />
+            <Switcher />
           </div>
           {topMaint.length > 0 && (
             <div className="flex justify-around">
@@ -175,7 +266,7 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
             <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
               Aucun entretien enregistré pour l'instant. Ajoute ta dernière vidange ou révision pour démarrer le suivi.
             </div>
-            <CornerTag name={v.name} color={v.color} />
+            <Switcher />
           </div>
         </div>
       )}
@@ -183,17 +274,20 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
   );
 }
 
-function MultiVehicleDashboard({ vehicles, onGoMaint }) {
+function MultiVehicleDashboard({ vehicles, allVehicles, viewMode, onChangeView, onGoMaint }) {
   const totalCost = vehicles.reduce((s, v) => s + (v.ownership?.totalCost || 0), 0);
   const showCost = vehicles.some((v) => v.fuelCount > 0 || v.maintCount > 0);
   const series = useMemo(() => buildConsumptionSeries(vehicles.filter((v) => v.consumption.length >= 2)), [vehicles]);
   const withConsumption = vehicles.filter((v) => v.consumption.length >= 2);
 
+  const Switcher = () => <VehicleSwitcher vehicles={allVehicles} value={viewMode} onChange={onChangeView} />;
+
   return (
     <>
       <div style={cardStyle()}>
-        <div style={sectionLabelStyle} className="mb-3">
-          CONSO. MOYENNE & PLEINS
+        <div className="flex items-start justify-between mb-3">
+          <div style={sectionLabelStyle}>CONSO. MOYENNE & PLEINS</div>
+          <Switcher />
         </div>
         <div className="space-y-3">
           {vehicles.map((v) => (
@@ -212,8 +306,9 @@ function MultiVehicleDashboard({ vehicles, onGoMaint }) {
 
       {showCost && (
         <div style={cardStyle()}>
-          <div style={sectionLabelStyle} className="mb-3">
-            COÛT DE SUIVI
+          <div className="flex items-start justify-between mb-3">
+            <div style={sectionLabelStyle}>COÛT DE SUIVI</div>
+            <Switcher />
           </div>
           <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: PALETTE.text }}>{fmtEuro(totalCost, 0)}</div>
           <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mb-3">
@@ -239,8 +334,9 @@ function MultiVehicleDashboard({ vehicles, onGoMaint }) {
 
       {series.length >= 2 && (
         <div style={cardStyle()}>
-          <div style={sectionLabelStyle} className="mb-3">
-            CONSOMMATION
+          <div className="flex items-start justify-between mb-3">
+            <div style={sectionLabelStyle}>CONSOMMATION</div>
+            <Switcher />
           </div>
           <div style={{ height: 140 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -280,8 +376,9 @@ function MultiVehicleDashboard({ vehicles, onGoMaint }) {
       )}
 
       <div style={cardStyle()}>
-        <div style={sectionLabelStyle} className="mb-3">
-          À SURVEILLER
+        <div className="flex items-start justify-between mb-3">
+          <div style={sectionLabelStyle}>À SURVEILLER</div>
+          <Switcher />
         </div>
         <div className="space-y-4">
           {vehicles.map((v) => {
@@ -323,26 +420,13 @@ function MultiVehicleDashboard({ vehicles, onGoMaint }) {
 }
 
 export default function Dashboard({ vehiclesData, vehicles, onGoMaint }) {
-  const idsKey = useMemo(() => [...vehiclesData].map((v) => v.id).sort().join(","), [vehiclesData]);
-  const [selectedIds, setSelectedIds] = useState(() => new Set(vehiclesData.map((v) => v.id)));
-  useEffect(() => {
-    setSelectedIds(new Set(idsKey ? idsKey.split(",") : []));
-  }, [idsKey]);
+  const [viewMode, setViewMode] = useState("all"); // "all" | id d'une moto précise
 
-  const toggle = (id) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        if (next.size === 1) return prev;
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const filtered = vehiclesData.filter((v) => selectedIds.has(v.id));
+  // Si la moto choisie a disparu (vendue/archivée entre-temps), on retombe sur
+  // "Toutes" plutôt que de garder un id fantôme — calculé à chaque rendu, pas
+  // besoin d'effet de synchronisation.
+  const validViewMode = viewMode !== "all" && !vehiclesData.some((v) => v.id === viewMode) ? "all" : viewMode;
+  const resolved = validViewMode === "all" ? vehiclesData : vehiclesData.filter((v) => v.id === validViewMode);
 
   const parcourus = (v) => {
     const endKm = v.status === "sold" && v.finalKm != null ? v.finalKm : v.currentKm;
@@ -357,10 +441,14 @@ export default function Dashboard({ vehiclesData, vehicles, onGoMaint }) {
 
   return (
     <div className="space-y-4 mt-2">
-      {vehiclesData.length > 1 && <VehicleFilterChips vehicles={vehiclesData} selectedIds={selectedIds} onToggle={toggle} />}
-
-      {filtered.length === 1 && <SingleVehicleDashboard v={filtered[0]} onGoMaint={onGoMaint} />}
-      {filtered.length > 1 && <MultiVehicleDashboard vehicles={filtered} onGoMaint={onGoMaint} />}
+      <div key={validViewMode} style={{ animation: "tabContentIn 200ms ease" }} className="space-y-4">
+        {resolved.length === 1 && (
+          <SingleVehicleDashboard v={resolved[0]} allVehicles={vehiclesData} viewMode={validViewMode} onChangeView={setViewMode} onGoMaint={onGoMaint} />
+        )}
+        {resolved.length > 1 && (
+          <MultiVehicleDashboard vehicles={resolved} allVehicles={vehiclesData} viewMode={validViewMode} onChangeView={setViewMode} onGoMaint={onGoMaint} />
+        )}
+      </div>
 
       {vehicles && vehicles.length > 0 && (
         <div style={cardStyle()}>
