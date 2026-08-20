@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Mic } from "lucide-react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -31,6 +31,10 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
   const location = useLocation();
   const tab = location.pathname === "/" || location.pathname === "" ? "dashboard" : location.pathname.replace("/", "");
   const setTab = (t) => navigate(t === "dashboard" ? "/" : `/${t}`);
+  const mainRef = useRef(null);
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [tab]);
   const [ready, setReady] = useState(false);
   const [showFuelForm, setShowFuelForm] = useState(false);
   const [showMaintForm, setShowMaintForm] = useState(false);
@@ -216,6 +220,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       <Header vehicle={data.vehicle} />
 
       <main
+        ref={mainRef}
         style={{
           width: "100%",
           flex: 1,
