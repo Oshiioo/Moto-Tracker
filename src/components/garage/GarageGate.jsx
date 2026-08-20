@@ -44,7 +44,7 @@ export default function GarageGate({ user }) {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) initial = migrateData(JSON.parse(raw));
-        } catch (e) {
+        } catch {
           /* ignore, on repart de DEFAULT_DATA */
         }
         const newId = uid();
@@ -57,7 +57,7 @@ export default function GarageGate({ user }) {
       const validActive = list.find((v) => v.id === savedActive);
       setActiveVehicleId(validActive ? savedActive : list[0]?.id || null);
     })();
-  }, [refreshVehicles, activeKey]);
+  }, [refreshVehicles, activeKey, user.uid]);
 
   const onSwitchVehicle = (id) => {
     setActiveVehicleId(id);

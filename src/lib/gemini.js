@@ -1,25 +1,32 @@
 // L'app ne détient plus jamais la clé Gemini — elle appelle un Worker Cloudflare
-// qui garde la clé en secret côté serveur et relaie la requête à Gemini.
-const WORKER_URL = import.meta.env.VITE_GEMINI_WORKER_URL || "";
-const WORKER_SECRET = import.meta.env.VITE_GEMINI_WORKER_SECRET || "";
+// qui garde la clé en secret côté serveur et relaie la requête à Gemini, après
+// avoir vérifié le ID token Firebase de l'utilisateur connecté.
+import { auth } from "../firebase";
 
-export const GEMINI_CONFIGURED = !!(WORKER_URL && WORKER_SECRET);
+const WORKER_URL = import.meta.env.VITE_GEMINI_WORKER_URL || "";
+
+export const GEMINI_CONFIGURED = !!WORKER_URL;
 
 const ERROR_MESSAGES = {
-  401: "Accès refusé par le proxy (secret partagé incorrect)",
+  401: "Session expirée ou non authentifiée, reconnecte-toi",
+  403: "Accès refusé (403), vérifie la configuration du Worker",
   404: "Worker introuvable (vérifie VITE_GEMINI_WORKER_URL)",
-  429: "Quota Gemini atteint pour aujourd'hui",
+  429: "Quota Gemini atteint",
 };
 
 async function callWorker(body) {
   if (!GEMINI_CONFIGURED) {
     throw new Error("Worker Gemini non configuré (voir Réglages)");
   }
+  const idToken = await auth.currentUser?.getIdToken();
+  if (!idToken) {
+    throw new Error("Utilisateur non authentifié");
+  }
   const res = await fetch(WORKER_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Shared-Secret": WORKER_SECRET,
+      Authorization: `Bearer ${idToken}`,
     },
     body: JSON.stringify(body),
   });

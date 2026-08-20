@@ -38,7 +38,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
-  const vehicleRef = doc(db, "users", user.uid, "vehicles", vehicleId);
+  const vehicleRef = useMemo(() => doc(db, "users", user.uid, "vehicles", vehicleId), [user.uid, vehicleId]);
 
   useEffect(() => {
     (async () => {
@@ -62,7 +62,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
     if (new URLSearchParams(window.location.search).get("quickadd") === "1") {
       setShowQuickAdd(true);
     }
-  }, [vehicleId]);
+  }, [vehicleRef]);
 
   const persist = useCallback(
     (next) => {
@@ -71,7 +71,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       setDoc(vehicleRef, clean, { merge: false }).catch((e) => console.error("Erreur de sauvegarde", e));
       onRefreshVehicles();
     },
-    [vehicleId]
+    [vehicleRef, onRefreshVehicles]
   );
 
   const updateVehicle = (patch) => persist({ ...data, vehicle: { ...data.vehicle, ...patch } });
@@ -212,7 +212,6 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       >
         {tab === "dashboard" && (
           <Dashboard
-            vehicle={data.vehicle}
             avgConsumption={avgConsumption}
             consumption={consumption}
             maintStatus={maintStatus}

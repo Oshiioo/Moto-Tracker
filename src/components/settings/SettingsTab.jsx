@@ -81,9 +81,8 @@ export default function SettingsTab({
             </div>
           ) : (
             <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }}>
-              Worker Gemini non configuré. Ajoute <code>VITE_GEMINI_WORKER_URL</code> et{" "}
-              <code>VITE_GEMINI_WORKER_SECRET</code> dans <code>.env.local</code>, puis redémarre{" "}
-              <code>npm run dev</code>.
+              Worker Gemini non configuré. Ajoute <code>VITE_GEMINI_WORKER_URL</code> dans{" "}
+              <code>.env.local</code>, puis redémarre <code>npm run dev</code>.
             </div>
           )}
         </div>

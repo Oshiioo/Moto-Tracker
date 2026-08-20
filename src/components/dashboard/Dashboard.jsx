@@ -7,7 +7,7 @@ import { PALETTE, FONT_DISPLAY, FONT_BODY, FONT_MONO, statusColor } from "../../
 import { fmtKm } from "../../lib/format";
 import { ruleProgress } from "../../lib/maintenanceRules";
 
-export default function Dashboard({ vehicle, avgConsumption, consumption, maintStatus, fuelCount, maintCount, onGoMaint, vehicles }) {
+export default function Dashboard({ avgConsumption, consumption, maintStatus, fuelCount, maintCount, onGoMaint, vehicles }) {
   const overdue = maintStatus.filter((m) => m.status === "overdue");
   const soon = maintStatus.filter((m) => m.status === "soon");
 
