@@ -21,6 +21,23 @@ export const FONT_MONO = "'JetBrains Mono', monospace";
 export const statusColor = (status) =>
   status === "overdue" ? PALETTE.danger : status === "soon" ? PALETTE.yellow : PALETTE.ok;
 
+// Style de carte standard — remplace les triplets background/border/borderRadius
+// et le padding (p-2/p-3/p-4 incohérents) répétés dans chaque composant.
+export const cardStyle = (borderColor = PALETTE.hairline, dashed = false) => ({
+  background: PALETTE.surface,
+  border: `1px ${dashed ? "dashed" : "solid"} ${borderColor}`,
+  borderRadius: 10,
+  padding: 16,
+});
+
+// Petit label de section en majuscules (ex. "CONSOMMATION", "HISTORIQUE")
+export const sectionLabelStyle = {
+  fontFamily: FONT_DISPLAY,
+  fontSize: 13,
+  letterSpacing: "0.08em",
+  color: PALETTE.textMuted,
+};
+
 export const inputStyle = {
   width: "100%",
   background: PALETTE.surface,

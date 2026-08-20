@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Field from "../ui/Field";
-import { PALETTE, FONT_BODY, inputStyle, submitStyle } from "../../theme/palette";
+import { PALETTE, FONT_BODY, inputStyle, submitStyle, cardStyle } from "../../theme/palette";
 import { fmtKm, fmtDuration } from "../../lib/format";
 
 export default function VehicleEditor({ vehicle, onUpdate }) {
@@ -41,7 +41,7 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
   const ownershipEndDate = status === "sold" ? saleDate : status === "archived" ? archiveDate : undefined;
 
   return (
-    <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+    <div style={cardStyle()}>
       <Field label="Nom de la moto">
         <input style={inputStyle} type="text" value={name} onChange={(e) => setName(e.target.value)} />
       </Field>

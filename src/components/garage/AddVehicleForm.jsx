@@ -178,7 +178,7 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
           </div>
           <div className="space-y-2">
             {suggestions.map((s) => (
-              <div key={s.id} style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8 }} className="p-2">
+              <div key={s.id} style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8 }} className="p-3">
                 <label className="flex items-center gap-2 mb-2">
                   <input type="checkbox" checked={s.checked} onChange={(e) => updateSuggestion(s.id, { checked: e.target.checked })} />
                   <input

@@ -3,7 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 import StatCard from "./StatCard";
 import AlertRow from "./AlertRow";
 import MiniRing from "./MiniRing";
-import { PALETTE, FONT_DISPLAY, FONT_BODY, FONT_MONO, statusColor } from "../../theme/palette";
+import { PALETTE, FONT_BODY, FONT_MONO, statusColor, cardStyle, sectionLabelStyle } from "../../theme/palette";
 import { fmtKm, fmtEuro } from "../../lib/format";
 import { ruleProgress } from "../../lib/maintenanceRules";
 
@@ -33,8 +33,8 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
       </div>
 
       {ownership && (fuelCount > 0 || maintCount > 0) && (
-        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
+        <div style={cardStyle()}>
+          <div style={sectionLabelStyle} className="mb-3">
             COÛT DE POSSESSION
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -64,8 +64,8 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
       )}
 
       {consumption && consumption.length >= 2 && (
-        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
+        <div style={cardStyle()}>
+          <div style={sectionLabelStyle} className="mb-3">
             CONSOMMATION
           </div>
           <div style={{ height: 140 }}>
@@ -98,8 +98,8 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
       )}
 
       {(overdue.length > 0 || soon.length > 0) && (
-        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
+        <div style={cardStyle()}>
+          <div style={sectionLabelStyle} className="mb-3">
             À SURVEILLER
           </div>
 
@@ -124,7 +124,7 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
       )}
 
       {overdue.length === 0 && soon.length === 0 && maintCount > 0 && (
-        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+        <div style={cardStyle()}>
           <div className="flex items-center gap-3 mb-4">
             <CheckCircle2 size={20} color={PALETTE.ok} />
             <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
@@ -142,7 +142,7 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
       )}
 
       {maintCount === 0 && (
-        <div style={{ background: PALETTE.surface, border: `1px dashed ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+        <div style={cardStyle(PALETTE.hairline, true)}>
           <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
             Aucun entretien enregistré pour l'instant. Ajoute ta dernière vidange ou révision pour démarrer le suivi.
           </div>
@@ -150,8 +150,8 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
       )}
 
       {vehicles && vehicles.length > 0 && (
-        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
+        <div style={cardStyle()}>
+          <div style={sectionLabelStyle} className="mb-3">
             MON GARAGE EN UN COUP D'ŒIL
           </div>
           <div style={{ height: Math.max(60, vehicles.length * 44) }}>

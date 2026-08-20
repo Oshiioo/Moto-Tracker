@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import ConfirmModal from "./ConfirmModal";
-import { PALETTE } from "../../theme/palette";
+import { PALETTE, cardStyle } from "../../theme/palette";
 
 export default function Card({ children, onDelete, confirmLabel = "cette entrée" }) {
   const [confirming, setConfirming] = useState(false);
   return (
-    <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-3 relative group">
+    <div style={cardStyle()} className="relative group">
       {children}
       <button
         onClick={() => setConfirming(true)}
         aria-label="Supprimer"
         style={{ color: PALETTE.steelDim }}
-        className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
       >
         <Trash2 size={14} />
       </button>

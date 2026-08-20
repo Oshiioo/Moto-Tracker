@@ -3,7 +3,7 @@ import SectionHeader from "../ui/SectionHeader";
 import Card from "../ui/Card";
 import GarageRow from "../garage/GarageRow";
 import VehicleEditor from "../garage/VehicleEditor";
-import { PALETTE, FONT_DISPLAY, FONT_BODY, FONT_MONO } from "../../theme/palette";
+import { PALETTE, FONT_DISPLAY, FONT_BODY, FONT_MONO, cardStyle } from "../../theme/palette";
 import { fmtKm } from "../../lib/format";
 
 export default function SettingsTab({
@@ -71,7 +71,7 @@ export default function SettingsTab({
         <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-2">
           Saisie par photo / voix
         </div>
-        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+        <div style={cardStyle()}>
           {apiKeyConfigured ? (
             <div className="flex items-center gap-2">
               <CheckCircle2 size={16} color={PALETTE.ok} />

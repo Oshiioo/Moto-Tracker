@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import ConfirmModal from "../ui/ConfirmModal";
-import { PALETTE, FONT_BODY, FONT_MONO } from "../../theme/palette";
+import { PALETTE, FONT_BODY, FONT_MONO, cardStyle } from "../../theme/palette";
 import { fmtKm, fmtDuration } from "../../lib/format";
 
 export default function GarageRow({ vehicle, active, onSwitch, onDelete, deletable }) {
@@ -9,10 +9,7 @@ export default function GarageRow({ vehicle, active, onSwitch, onDelete, deletab
   return (
     <div
       style={{
-        background: PALETTE.surface,
-        border: `1px solid ${active ? PALETTE.amber : PALETTE.hairline}`,
-        borderRadius: 10,
-        padding: 12,
+        ...cardStyle(active ? PALETTE.amber : PALETTE.hairline),
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
