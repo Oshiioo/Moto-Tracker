@@ -23,7 +23,7 @@ const GENERIC_SUGGESTIONS = [
 
 const SOURCE_LABELS = {
   generic: { label: "générique", color: PALETTE.textMuted },
-  brand: { label: "estimé marque", color: PALETTE.yellow },
+  brand: { label: "estimé marque", color: PALETTE.warning },
   model: { label: "modèle", color: PALETTE.ok },
 };
 
@@ -171,12 +171,12 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
           <div
             style={{
               background: PALETTE.surface,
-              border: `1px solid ${PALETTE.yellow}`,
+              border: `1px solid ${PALETTE.warning}`,
               borderRadius: 8,
               padding: "8px 12px",
               fontFamily: FONT_BODY,
               fontSize: 11,
-              color: PALETTE.yellow,
+              color: PALETTE.warning,
             }}
             className="mb-2"
           >

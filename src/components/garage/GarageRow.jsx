@@ -9,7 +9,7 @@ export default function GarageRow({ vehicle, active, onSwitch, onDelete, deletab
   return (
     <div
       style={{
-        ...cardStyle(active ? PALETTE.amber : PALETTE.hairline),
+        ...cardStyle(active ? PALETTE.primary : PALETTE.hairline),
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -20,7 +20,7 @@ export default function GarageRow({ vehicle, active, onSwitch, onDelete, deletab
         <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: PALETTE.text, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
           {color && <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />}
           {vehicle.name}{" "}
-          {active && <span style={{ color: PALETTE.amber, fontSize: 11 }}>· active</span>}
+          {active && <span style={{ color: PALETTE.primary, fontSize: 11 }}>· active</span>}
           {vehicle.status === "sold" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>· vendue</span>}
           {vehicle.status === "archived" && (
             <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>

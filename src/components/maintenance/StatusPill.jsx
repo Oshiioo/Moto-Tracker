@@ -2,7 +2,7 @@ import { PALETTE, FONT_MONO } from "../../theme/palette";
 
 const STATUS_MAP = {
   ok: { label: "À jour", color: PALETTE.ok },
-  soon: { label: "Bientôt", color: PALETTE.yellow },
+  soon: { label: "Bientôt", color: PALETTE.warning },
   overdue: { label: "Dépassé", color: PALETTE.danger },
 };
 

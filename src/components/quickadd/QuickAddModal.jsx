@@ -168,9 +168,9 @@ Un plein d'essence évoque des litres ou de l'essence. Un entretien évoque une 
                 fontFamily: FONT_BODY,
                 fontSize: 13,
                 fontWeight: 600,
-                border: `1px solid ${listening ? PALETTE.amber : PALETTE.hairline}`,
-                background: listening ? PALETTE.amber : PALETTE.surface,
-                color: listening ? "#1B1A17" : PALETTE.text,
+                border: `1px solid ${listening ? PALETTE.primary : PALETTE.hairline}`,
+                background: listening ? PALETTE.primary : PALETTE.surface,
+                color: listening ? "#FFFFFF" : PALETTE.text,
                 animation: listening ? "listeningPulse 1.4s ease-in-out infinite" : "none",
               }}
             >
@@ -227,8 +227,8 @@ Un plein d'essence évoque des litres ou de l'essence. Un entretien évoque une 
                 fontFamily: FONT_BODY,
                 fontSize: 12,
                 fontWeight: 600,
-                background: kind === "fuel" ? PALETTE.amber : PALETTE.surface,
-                color: kind === "fuel" ? "#1B1A17" : PALETTE.textMuted,
+                background: kind === "fuel" ? PALETTE.primary : PALETTE.surface,
+                color: kind === "fuel" ? "#FFFFFF" : PALETTE.textMuted,
                 border: `1px solid ${PALETTE.hairline}`,
               }}
             >
@@ -244,8 +244,8 @@ Un plein d'essence évoque des litres ou de l'essence. Un entretien évoque une 
                 fontFamily: FONT_BODY,
                 fontSize: 12,
                 fontWeight: 600,
-                background: kind === "maintenance" ? PALETTE.amber : PALETTE.surface,
-                color: kind === "maintenance" ? "#1B1A17" : PALETTE.textMuted,
+                background: kind === "maintenance" ? PALETTE.primary : PALETTE.surface,
+                color: kind === "maintenance" ? "#FFFFFF" : PALETTE.textMuted,
                 border: `1px solid ${PALETTE.hairline}`,
               }}
             >

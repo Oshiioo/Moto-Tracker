@@ -17,7 +17,7 @@ function remainingLabel(rule) {
 
 export default function AlertRow({ rule }) {
   const isOverdue = rule.status === "overdue";
-  const color = isOverdue ? PALETTE.danger : PALETTE.yellow;
+  const color = isOverdue ? PALETTE.danger : PALETTE.warning;
   const Icon = isOverdue ? AlertTriangle : Clock;
   return (
     <div className="flex items-center justify-between">

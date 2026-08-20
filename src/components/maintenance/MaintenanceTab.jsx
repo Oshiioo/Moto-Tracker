@@ -19,7 +19,7 @@ export default function MaintenanceTab({ vehicle, statuses, history, onAdd, onDe
           {statuses.map((s) => (
             <div
               key={s.id}
-              style={cardStyle(s.status !== "ok" ? (s.status === "overdue" ? PALETTE.danger : PALETTE.yellow) : PALETTE.hairline)}
+              style={cardStyle(s.status !== "ok" ? (s.status === "overdue" ? PALETTE.danger : PALETTE.warning) : PALETTE.hairline)}
             >
               <div className="flex items-start gap-3">
                 <IconBadge icon={Wrench} color={statusColor(s.status)} />
@@ -47,7 +47,7 @@ export default function MaintenanceTab({ vehicle, statuses, history, onAdd, onDe
             <button
               type="button"
               onClick={() => setShowExport(true)}
-              style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, color: PALETTE.amberSoft }}
+              style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, color: PALETTE.primarySoft }}
             >
               <FileDown size={14} /> Exporter
             </button>

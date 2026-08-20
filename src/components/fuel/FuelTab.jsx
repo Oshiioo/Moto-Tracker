@@ -18,7 +18,7 @@ export default function FuelTab({ entries, consumption, onAdd, onDelete }) {
           {entries.map((e) => (
             <Card key={e.id} onDelete={() => onDelete(e.id)} confirmLabel={`ce plein du ${fmtDate(e.date)}`}>
               <div className="flex items-start gap-3">
-                <IconBadge icon={Fuel} color={PALETTE.amber} />
+                <IconBadge icon={Fuel} color={PALETTE.primary} />
                 <div className="flex justify-between items-start flex-1">
                   <div>
                     <div style={{ fontFamily: FONT_MONO, fontSize: 16, color: PALETTE.text }}>{fmtKm(e.km)} km</div>
@@ -35,7 +35,7 @@ export default function FuelTab({ entries, consumption, onAdd, onDelete }) {
                       </div>
                     )}
                     {consByEntry[e.id] && (
-                      <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.amberSoft }}>
+                      <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.primarySoft }}>
                         {consByEntry[e.id].toFixed(1)} L/100km
                       </div>
                     )}

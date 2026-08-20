@@ -17,7 +17,7 @@ export default function GlobalStyles() {
         button { background: none; border: none; font: inherit; color: inherit; cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent; transition: transform 100ms ease; }
         button:active { transform: scale(0.96); }
         input, select { outline: none; }
-        input:focus, select:focus { border-color: ${PALETTE.amber} !important; }
+        input:focus, select:focus { border-color: ${PALETTE.primary} !important; }
         ::placeholder { color: ${PALETTE.steelDim}; }
       }
 
@@ -25,7 +25,7 @@ export default function GlobalStyles() {
       @keyframes modalPanelIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
       @keyframes tabContentIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes savedPop { 0% { transform: scale(0.9); opacity: 0; } 60% { transform: scale(1.03); opacity: 1; } 100% { transform: scale(1); } }
-      @keyframes listeningPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(201, 122, 43, 0.4); } 50% { box-shadow: 0 0 0 8px rgba(201, 122, 43, 0); } }
+      @keyframes listeningPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(124, 92, 252, 0.4); } 50% { box-shadow: 0 0 0 8px rgba(124, 92, 252, 0); } }
 
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }

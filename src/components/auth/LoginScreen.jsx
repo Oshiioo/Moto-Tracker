@@ -27,7 +27,7 @@ export default function LoginScreen() {
         style={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 16, padding: 8 }}
         className="mb-4"
       >
-        <Bike size={32} color={PALETTE.amberSoft} />
+        <Bike size={32} color={PALETTE.primarySoft} />
       </div>
       <div style={{ fontFamily: FONT_DISPLAY, fontSize: 24, fontWeight: 600, color: PALETTE.text }} className="mb-1 text-center">
         Carnet d'entretien
@@ -39,8 +39,8 @@ export default function LoginScreen() {
         onClick={onLogin}
         disabled={busy}
         style={{
-          background: PALETTE.amber,
-          color: "#1B1A17",
+          background: PALETTE.primary,
+          color: "#FFFFFF",
           fontFamily: FONT_BODY,
           fontWeight: 600,
           fontSize: 14,

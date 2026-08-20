@@ -21,7 +21,7 @@ export default function Header({ vehicle }) {
         }}
       >
         <div>
-          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, letterSpacing: "0.12em", color: PALETTE.amber }}>
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 12, letterSpacing: "0.12em", color: PALETTE.primary }}>
             CARNET D'ENTRETIEN
           </div>
           <div style={{ fontFamily: FONT_DISPLAY, fontSize: 22, fontWeight: 600, color: PALETTE.text }}>

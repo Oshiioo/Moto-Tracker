@@ -71,7 +71,7 @@ export default function MaintenanceExportModal({ vehicle, history, onClose }) {
             <button
               type="button"
               onClick={() => setSelected(selected.size === allTypes.length ? new Set() : new Set(allTypes))}
-              style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.amberSoft, fontWeight: 600 }}
+              style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.primarySoft, fontWeight: 600 }}
             >
               {selected.size === allTypes.length ? "Tout désélectionner" : "Tout sélectionner"}
             </button>

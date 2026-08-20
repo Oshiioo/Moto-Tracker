@@ -1,17 +1,20 @@
+// Charte "Éclat" — claire et énergique (violet + touches vives), choisie
+// parmi 3 pistes proposées pour remplacer l'ancienne palette sombre jugée
+// trop austère (tons terreux marron/olive sur fond quasi noir).
 export const PALETTE = {
-  bg: "#1B1A17",
-  surface: "#252320",
-  surfaceRaised: "#2E2B26",
-  steel: "#948C7C",
-  steelDim: "#6B6558",
-  amber: "#C97A2B",
-  amberSoft: "#E0985A",
-  yellow: "#E8B93B",
-  danger: "#C1442E",
-  ok: "#7A9B6E",
-  text: "#F1ECE2",
-  textMuted: "#B4AC9C",
-  hairline: "#3A362F",
+  bg: "#FAF9FF",
+  surface: "#FFFFFF",
+  surfaceRaised: "#F3F1FC",
+  steel: "#8B84A6",
+  steelDim: "#B6AFC9",
+  primary: "#7C5CFC",
+  primarySoft: "#6D4FD1",
+  warning: "#9C6B0A",
+  danger: "#EF4B6E",
+  ok: "#14B87A",
+  text: "#211A38",
+  textMuted: "#7A7290",
+  hairline: "#E4E0F5",
 };
 
 export const FONT_DISPLAY = "'Oswald', sans-serif";
@@ -19,7 +22,7 @@ export const FONT_BODY = "'Work Sans', sans-serif";
 export const FONT_MONO = "'JetBrains Mono', monospace";
 
 export const statusColor = (status) =>
-  status === "overdue" ? PALETTE.danger : status === "soon" ? PALETTE.yellow : PALETTE.ok;
+  status === "overdue" ? PALETTE.danger : status === "soon" ? PALETTE.warning : PALETTE.ok;
 
 // Palette catégorielle pour distinguer plusieurs motos (dashboard multi-motos).
 // 3 teintes distinctes du reste de la palette (pas de rouge/jaune/vert, déjà
@@ -66,7 +69,7 @@ export const inputStyle = {
 
 export const submitStyle = {
   width: "100%",
-  background: PALETTE.amber,
+  background: PALETTE.primary,
   color: "#1B1A17",
   fontFamily: FONT_BODY,
   fontWeight: 600,
@@ -82,7 +85,7 @@ export const aiButtonStyle = {
   gap: 6,
   background: PALETTE.surface,
   border: `1px solid ${PALETTE.hairline}`,
-  color: PALETTE.amberSoft,
+  color: PALETTE.primarySoft,
   fontFamily: FONT_BODY,
   fontSize: 12,
   fontWeight: 600,

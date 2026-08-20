@@ -28,8 +28,8 @@ export default function TabBar({ tab, setTab }) {
           const Icon = it.icon;
           return (
             <button key={it.id} onClick={() => setTab(it.id)} className="flex flex-col items-center gap-1 py-3">
-              <Icon size={20} color={active ? PALETTE.amber : PALETTE.steelDim} />
-              <span style={{ fontFamily: FONT_BODY, fontSize: 10, color: active ? PALETTE.amber : PALETTE.steelDim }}>
+              <Icon size={20} color={active ? PALETTE.primary : PALETTE.steelDim} />
+              <span style={{ fontFamily: FONT_BODY, fontSize: 10, color: active ? PALETTE.primary : PALETTE.steelDim }}>
                 {it.label}
               </span>
             </button>

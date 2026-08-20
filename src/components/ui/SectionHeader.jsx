@@ -11,14 +11,14 @@ export default function SectionHeader({ title, onAdd, addLabel }) {
           display: "flex",
           alignItems: "center",
           gap: 6,
-          background: PALETTE.amber,
-          color: "#1B1A17",
+          background: PALETTE.primary,
+          color: "#FFFFFF",
           fontFamily: FONT_BODY,
           fontWeight: 700,
           fontSize: 13,
           borderRadius: 10,
           padding: "10px 16px",
-          boxShadow: `0 2px 10px ${PALETTE.amber}4D`,
+          boxShadow: `0 2px 10px ${PALETTE.primary}4D`,
         }}
       >
         <Plus size={16} strokeWidth={2.5} /> {addLabel}

@@ -353,7 +353,7 @@ function ConsommationCard({ allVehicles, defaultId }) {
                 labelFormatter={(km) => `${fmtKm(km)} km`}
                 formatter={(v) => [`${v} L/100km`, "Conso"]}
               />
-              <Line type="monotone" dataKey="value" stroke={PALETTE.amber} strokeWidth={2} dot={{ r: 3, fill: PALETTE.amber }} animationDuration={500} />
+              <Line type="monotone" dataKey="value" stroke={PALETTE.primary} strokeWidth={2} dot={{ r: 3, fill: PALETTE.primary }} animationDuration={500} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -459,7 +459,7 @@ function ASurveillerCard({ allVehicles, defaultId, onGoMaint }) {
             );
           })}
         </div>
-        <button onClick={onGoMaint} style={{ color: PALETTE.amberSoft, fontFamily: FONT_BODY, fontSize: 13 }} className="mt-3 font-medium">
+        <button onClick={onGoMaint} style={{ color: PALETTE.primarySoft, fontFamily: FONT_BODY, fontSize: 13 }} className="mt-3 font-medium">
           Voir l'entretien →
         </button>
       </div>
@@ -494,7 +494,7 @@ function ASurveillerCard({ allVehicles, defaultId, onGoMaint }) {
             <AlertRow key={m.id} rule={m} />
           ))}
         </div>
-        <button onClick={onGoMaint} style={{ color: PALETTE.amberSoft, fontFamily: FONT_BODY, fontSize: 13 }} className="mt-3 font-medium">
+        <button onClick={onGoMaint} style={{ color: PALETTE.primarySoft, fontFamily: FONT_BODY, fontSize: 13 }} className="mt-3 font-medium">
           Voir l'entretien →
         </button>
       </div>
@@ -572,7 +572,7 @@ export default function Dashboard({ vehiclesData, vehicles, activeVehicleId, onG
                 <Tooltip
                   contentStyle={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8, fontSize: 12 }}
                   labelStyle={{ color: PALETTE.text }}
-                  itemStyle={{ color: PALETTE.amberSoft }}
+                  itemStyle={{ color: PALETTE.primarySoft }}
                   formatter={(v) => [`${fmtKm(v)} km`, "Parcourus"]}
                   cursor={{ fill: PALETTE.hairline, opacity: 0.3 }}
                 />
@@ -586,7 +586,7 @@ export default function Dashboard({ vehiclesData, vehicles, activeVehicleId, onG
           </div>
           <div style={{ borderTop: `1px solid ${PALETTE.hairline}`, paddingTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 13, color: PALETTE.text }}>Total parcouru</span>
-            <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: PALETTE.amberSoft }}>{fmtKm(totalParcourus)} km</span>
+            <span style={{ fontFamily: FONT_MONO, fontSize: 16, fontWeight: 700, color: PALETTE.primarySoft }}>{fmtKm(totalParcourus)} km</span>
           </div>
         </div>
       )}
