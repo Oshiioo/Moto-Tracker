@@ -222,54 +222,56 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
           boxSizing: "border-box",
         }}
       >
-        {tab === "dashboard" && (
-          <Dashboard
-            avgConsumption={avgConsumption}
-            consumption={consumption}
-            maintStatus={maintStatus}
-            fuelCount={data.fuel.length}
-            maintCount={data.maintenance.length}
-            onGoMaint={() => setTab("maintenance")}
-            vehicles={vehicles}
-            ownership={ownership}
-          />
-        )}
+        <div key={tab} style={{ animation: "tabContentIn 200ms ease" }}>
+          {tab === "dashboard" && (
+            <Dashboard
+              avgConsumption={avgConsumption}
+              consumption={consumption}
+              maintStatus={maintStatus}
+              fuelCount={data.fuel.length}
+              maintCount={data.maintenance.length}
+              onGoMaint={() => setTab("maintenance")}
+              vehicles={vehicles}
+              ownership={ownership}
+            />
+          )}
 
-        {tab === "fuel" && (
-          <FuelTab
-            entries={[...data.fuel].sort((a, b) => b.km - a.km)}
-            consumption={consumption}
-            onAdd={() => setShowFuelForm(true)}
-            onDelete={(id) => deleteItem("fuel", id)}
-          />
-        )}
+          {tab === "fuel" && (
+            <FuelTab
+              entries={[...data.fuel].sort((a, b) => b.km - a.km)}
+              consumption={consumption}
+              onAdd={() => setShowFuelForm(true)}
+              onDelete={(id) => deleteItem("fuel", id)}
+            />
+          )}
 
-        {tab === "maintenance" && (
-          <MaintenanceTab
-            statuses={maintStatus}
-            history={[...data.maintenance].sort((a, b) => b.km - a.km)}
-            onAdd={() => setShowMaintForm(true)}
-            onDelete={(id) => deleteItem("maintenance", id)}
-          />
-        )}
+          {tab === "maintenance" && (
+            <MaintenanceTab
+              statuses={maintStatus}
+              history={[...data.maintenance].sort((a, b) => b.km - a.km)}
+              onAdd={() => setShowMaintForm(true)}
+              onDelete={(id) => deleteItem("maintenance", id)}
+            />
+          )}
 
-        {tab === "settings" && (
-          <SettingsTab
-            vehicle={data.vehicle}
-            onUpdateVehicle={updateVehicle}
-            vehicles={vehicles}
-            activeVehicleId={vehicleId}
-            onSwitchVehicle={onSwitchVehicle}
-            onRequestAddVehicle={() => setShowAddVehicleForm(true)}
-            onDeleteVehicle={onDeleteVehicle}
-            rules={data.rules}
-            onAddRule={() => setShowRuleForm(true)}
-            onDeleteRule={(id) => deleteItem("rules", id)}
-            apiKeyConfigured={GEMINI_CONFIGURED}
-            userEmail={user.email}
-            onSignOut={onSignOut}
-          />
-        )}
+          {tab === "settings" && (
+            <SettingsTab
+              vehicle={data.vehicle}
+              onUpdateVehicle={updateVehicle}
+              vehicles={vehicles}
+              activeVehicleId={vehicleId}
+              onSwitchVehicle={onSwitchVehicle}
+              onRequestAddVehicle={() => setShowAddVehicleForm(true)}
+              onDeleteVehicle={onDeleteVehicle}
+              rules={data.rules}
+              onAddRule={() => setShowRuleForm(true)}
+              onDeleteRule={(id) => deleteItem("rules", id)}
+              apiKeyConfigured={GEMINI_CONFIGURED}
+              userEmail={user.email}
+              onSignOut={onSignOut}
+            />
+          )}
+        </div>
         <div style={{ height: 24 }} />
       </main>
 

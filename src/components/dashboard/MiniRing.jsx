@@ -17,7 +17,8 @@ export default function MiniRing({ percent, color, label }) {
               innerRadius={20}
               outerRadius={28}
               stroke="none"
-              isAnimationActive={false}
+              animationDuration={600}
+              animationEasing="ease-out"
             >
               <Cell fill={color} />
               <Cell fill={PALETTE.hairline} />

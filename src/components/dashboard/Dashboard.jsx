@@ -80,7 +80,7 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
                   labelFormatter={(km) => `${fmtKm(km)} km`}
                   formatter={(v) => [`${v} L/100km`, "Conso"]}
                 />
-                <Line type="monotone" dataKey="value" stroke={PALETTE.amber} strokeWidth={2} dot={{ r: 3, fill: PALETTE.amber }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="value" stroke={PALETTE.amber} strokeWidth={2} dot={{ r: 3, fill: PALETTE.amber }} animationDuration={500} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -170,7 +170,7 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
                   formatter={(v) => [`${fmtKm(v)} km`, "Parcourus"]}
                   cursor={{ fill: PALETTE.hairline, opacity: 0.3 }}
                 />
-                <Bar dataKey="km" fill={PALETTE.amberSoft} radius={[0, 4, 4, 0]} isAnimationActive={false} />
+                <Bar dataKey="km" fill={PALETTE.amberSoft} radius={[0, 4, 4, 0]} animationDuration={500} />
               </BarChart>
             </ResponsiveContainer>
           </div>

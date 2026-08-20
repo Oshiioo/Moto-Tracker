@@ -109,7 +109,7 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
           setSaved(true);
           setTimeout(() => setSaved(false), 2000);
         }}
-        style={{ ...submitStyle, marginTop: 4, opacity: dirty ? 1 : 0.5 }}
+        style={{ ...submitStyle, marginTop: 4, opacity: dirty ? 1 : 0.5, animation: saved ? "savedPop 300ms ease" : "none" }}
       >
         {saved ? "Enregistré ✓" : "Mettre à jour"}
       </button>

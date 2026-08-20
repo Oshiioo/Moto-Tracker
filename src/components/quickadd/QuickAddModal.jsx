@@ -171,6 +171,7 @@ Un plein d'essence évoque des litres ou de l'essence. Un entretien évoque une 
                 border: `1px solid ${listening ? PALETTE.amber : PALETTE.hairline}`,
                 background: listening ? PALETTE.amber : PALETTE.surface,
                 color: listening ? "#1B1A17" : PALETTE.text,
+                animation: listening ? "listeningPulse 1.4s ease-in-out infinite" : "none",
               }}
             >
               {listening ? <Square size={16} /> : <Mic size={16} />}
