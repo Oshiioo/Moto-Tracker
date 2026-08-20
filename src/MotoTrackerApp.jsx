@@ -247,6 +247,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
 
           {tab === "maintenance" && (
             <MaintenanceTab
+              vehicle={data.vehicle}
               statuses={maintStatus}
               history={[...data.maintenance].sort((a, b) => b.km - a.km)}
               onAdd={() => setShowMaintForm(true)}

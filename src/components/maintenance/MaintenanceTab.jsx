@@ -1,13 +1,16 @@
-import { Wrench } from "lucide-react";
+import { useState } from "react";
+import { Wrench, FileDown } from "lucide-react";
 import SectionHeader from "../ui/SectionHeader";
 import EmptyState from "../ui/EmptyState";
 import Card from "../ui/Card";
 import IconBadge from "../ui/IconBadge";
 import StatusPill from "./StatusPill";
+import MaintenanceExportModal from "./MaintenanceExportModal";
 import { PALETTE, FONT_BODY, FONT_MONO, cardStyle, sectionLabelStyle, statusColor } from "../../theme/palette";
 import { fmtKm, fmtDate } from "../../lib/format";
 
-export default function MaintenanceTab({ statuses, history, onAdd, onDelete }) {
+export default function MaintenanceTab({ vehicle, statuses, history, onAdd, onDelete }) {
+  const [showExport, setShowExport] = useState(false);
   return (
     <div className="mt-2 space-y-6">
       <div>
@@ -38,8 +41,17 @@ export default function MaintenanceTab({ statuses, history, onAdd, onDelete }) {
       </div>
 
       <div>
-        <div style={sectionLabelStyle} className="mb-3">
-          HISTORIQUE
+        <div className="flex justify-between items-center mb-3">
+          <div style={sectionLabelStyle}>HISTORIQUE</div>
+          {history.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowExport(true)}
+              style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: FONT_BODY, fontSize: 12, fontWeight: 600, color: PALETTE.amberSoft }}
+            >
+              <FileDown size={14} /> Exporter
+            </button>
+          )}
         </div>
         {history.length === 0 ? (
           <EmptyState text="Aucune intervention enregistrée." />
@@ -63,6 +75,8 @@ export default function MaintenanceTab({ statuses, history, onAdd, onDelete }) {
           </div>
         )}
       </div>
+
+      {showExport && <MaintenanceExportModal vehicle={vehicle} history={history} onClose={() => setShowExport(false)} />}
     </div>
   );
 }
