@@ -1,0 +1,13 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "moto-tracker-gemini-proxy",
+	"main": "src/index.js",
+	"compatibility_date": "2026-08-15",
+	"compatibility_flags": ["global_fetch_strictly_public"],
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		"ALLOWED_ORIGIN": "*"
+	}
+}
