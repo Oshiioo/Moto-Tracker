@@ -11,6 +11,13 @@ import { ruleProgress } from "../../lib/maintenanceRules";
 
 const Dot = ({ color }) => <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />;
 
+const CornerTag = ({ name, color }) => (
+  <div className="flex items-center gap-1">
+    <Dot color={color} />
+    <span style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, color: PALETTE.textMuted }}>{name}</span>
+  </div>
+);
+
 // Fusionne les séries de conso de plusieurs motos par date (les km ne sont
 // pas comparables d'une moto à l'autre) pour un graphe multi-lignes.
 function buildConsumptionSeries(vehicles) {
@@ -43,14 +50,17 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Conso. moyenne" value={avgConsumption ? avgConsumption.toFixed(1) : "—"} unit="L/100km" />
+        <StatCard label="Conso. moyenne" value={avgConsumption ? avgConsumption.toFixed(1) : "—"} unit="L/100km" tag={{ name: v.name, color: v.color }} />
         <StatCard label="Pleins enregistrés" value={fuelCount} unit={fuelCount > 1 ? "entrées" : "entrée"} />
       </div>
 
       {ownership && (fuelCount > 0 || maintCount > 0) && (
         <div style={cardStyle()}>
-          <div style={sectionLabelStyle} className="mb-3">
-            COÛT DE SUIVI{ownership.trackedSince ? ` · DEPUIS LE ${fmtDate(ownership.trackedSince).toUpperCase()}` : ""}
+          <div className="flex items-start justify-between mb-3">
+            <div style={sectionLabelStyle}>
+              COÛT DE SUIVI{ownership.trackedSince ? ` · DEPUIS LE ${fmtDate(ownership.trackedSince).toUpperCase()}` : ""}
+            </div>
+            <CornerTag name={v.name} color={v.color} />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
@@ -78,8 +88,9 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
 
       {consumption.length >= 2 && (
         <div style={cardStyle()}>
-          <div style={sectionLabelStyle} className="mb-3">
-            CONSOMMATION
+          <div className="flex items-start justify-between mb-3">
+            <div style={sectionLabelStyle}>CONSOMMATION</div>
+            <CornerTag name={v.name} color={v.color} />
           </div>
           <div style={{ height: 140 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -112,8 +123,9 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
 
       {(overdue.length > 0 || soon.length > 0) && (
         <div style={cardStyle()}>
-          <div style={sectionLabelStyle} className="mb-3">
-            À SURVEILLER
+          <div className="flex items-start justify-between mb-3">
+            <div style={sectionLabelStyle}>À SURVEILLER</div>
+            <CornerTag name={v.name} color={v.color} />
           </div>
 
           <div className="flex justify-around mb-4">
@@ -138,11 +150,14 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
 
       {overdue.length === 0 && soon.length === 0 && maintCount > 0 && (
         <div style={cardStyle()}>
-          <div className="flex items-center gap-3 mb-4">
-            <CheckCircle2 size={20} color={PALETTE.ok} />
-            <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
-              Tout l'entretien est à jour.
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 size={20} color={PALETTE.ok} />
+              <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
+                Tout l'entretien est à jour.
+              </div>
             </div>
+            <CornerTag name={v.name} color={v.color} />
           </div>
           {topMaint.length > 0 && (
             <div className="flex justify-around">
@@ -156,8 +171,11 @@ function SingleVehicleDashboard({ v, onGoMaint }) {
 
       {maintCount === 0 && (
         <div style={cardStyle(PALETTE.hairline, true)}>
-          <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
-            Aucun entretien enregistré pour l'instant. Ajoute ta dernière vidange ou révision pour démarrer le suivi.
+          <div className="flex items-start justify-between">
+            <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
+              Aucun entretien enregistré pour l'instant. Ajoute ta dernière vidange ou révision pour démarrer le suivi.
+            </div>
+            <CornerTag name={v.name} color={v.color} />
           </div>
         </div>
       )}

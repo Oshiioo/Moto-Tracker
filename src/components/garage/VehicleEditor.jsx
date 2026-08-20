@@ -5,6 +5,9 @@ import { fmtKm, fmtDuration } from "../../lib/format";
 
 export default function VehicleEditor({ vehicle, onUpdate }) {
   const [name, setName] = useState(vehicle.name);
+  const [brand, setBrand] = useState(vehicle.brand || "");
+  const [model, setModel] = useState(vehicle.model || "");
+  const [year, setYear] = useState(vehicle.year || "");
   const [km, setKm] = useState(String(vehicle.currentKm));
   const [status, setStatus] = useState(vehicle.status || "active");
   const [acquisitionKm, setAcquisitionKm] = useState(String(vehicle.acquisitionKm || 0));
@@ -17,6 +20,9 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
 
   useEffect(() => {
     setName(vehicle.name);
+    setBrand(vehicle.brand || "");
+    setModel(vehicle.model || "");
+    setYear(vehicle.year || "");
     setKm(String(vehicle.currentKm));
     setStatus(vehicle.status || "active");
     setAcquisitionKm(String(vehicle.acquisitionKm || 0));
@@ -25,10 +31,13 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
     setFinalKm(String(vehicle.finalKm ?? vehicle.currentKm));
     setArchiveReason(vehicle.archiveReason || "Accidentée");
     setArchiveDate(vehicle.archiveDate || new Date().toISOString().slice(0, 10));
-  }, [vehicle.name, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.acquisitionDate, vehicle.saleDate, vehicle.finalKm, vehicle.archiveReason, vehicle.archiveDate]);
+  }, [vehicle.name, vehicle.brand, vehicle.model, vehicle.year, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.acquisitionDate, vehicle.saleDate, vehicle.finalKm, vehicle.archiveReason, vehicle.archiveDate]);
 
   const dirty =
     name !== vehicle.name ||
+    brand !== (vehicle.brand || "") ||
+    model !== (vehicle.model || "") ||
+    year !== (vehicle.year || "") ||
     Number(km) !== vehicle.currentKm ||
     status !== (vehicle.status || "active") ||
     Number(acquisitionKm) !== (vehicle.acquisitionKm || 0) ||
@@ -45,6 +54,14 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
       <Field label="Nom de la moto">
         <input style={inputStyle} type="text" value={name} onChange={(e) => setName(e.target.value)} />
       </Field>
+      <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-2">
+        Marque, modèle, année — optionnel
+      </div>
+      <div className="flex gap-2 mb-3">
+        <input style={{ ...inputStyle, flex: 1 }} type="text" placeholder="Marque" value={brand} onChange={(e) => setBrand(e.target.value)} />
+        <input style={{ ...inputStyle, flex: 1 }} type="text" placeholder="Modèle" value={model} onChange={(e) => setModel(e.target.value)} />
+        <input style={{ ...inputStyle, width: 90 }} type="text" placeholder="Année" value={year} onChange={(e) => setYear(e.target.value)} />
+      </div>
       <Field label="Kilométrage actuel">
         <input style={inputStyle} type="number" value={km} onChange={(e) => setKm(e.target.value)} />
       </Field>
@@ -98,6 +115,9 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
         onClick={() => {
           onUpdate({
             name,
+            brand: brand || null,
+            model: model || null,
+            year: year || null,
             currentKm: Number(km),
             status,
             acquisitionKm: Number(acquisitionKm),

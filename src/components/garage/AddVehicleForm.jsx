@@ -105,7 +105,15 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
             ...(s.intervalKm ? { intervalKm: Number(s.intervalKm) } : {}),
             ...(s.intervalMonths ? { intervalMonths: Number(s.intervalMonths) } : {}),
           }));
-        onSubmit(name.trim(), currentKm, rules, acquisitionDate);
+        onSubmit({
+          name: name.trim(),
+          currentKm,
+          rules,
+          acquisitionDate,
+          brand: brand.trim(),
+          model: model.trim(),
+          year: year.trim(),
+        });
       }}
     >
       <Field label="Nom de la moto">
