@@ -1,13 +1,13 @@
 import { Fuel, Wrench, Gauge, Settings } from "lucide-react";
 import { PALETTE, FONT_BODY } from "../../theme/palette";
-import { CONTENT_MAX_WIDTH } from "../../lib/constants";
+import { CONTENT_MAX_WIDTH, TAB_IDS } from "../../lib/constants";
 
-const TABS = [
-  { id: "dashboard", label: "Accueil", icon: Gauge },
-  { id: "fuel", label: "Carburant", icon: Fuel },
-  { id: "maintenance", label: "Entretien", icon: Wrench },
-  { id: "settings", label: "Réglages", icon: Settings },
-];
+const TAB_META = {
+  dashboard: { label: "Accueil", icon: Gauge },
+  fuel: { label: "Carburant", icon: Fuel },
+  maintenance: { label: "Entretien", icon: Wrench },
+  settings: { label: "Réglages", icon: Settings },
+};
 
 export default function TabBar({ tab, setTab }) {
   return (
@@ -23,14 +23,14 @@ export default function TabBar({ tab, setTab }) {
           boxSizing: "border-box",
         }}
       >
-        {TABS.map((it) => {
-          const active = tab === it.id;
-          const Icon = it.icon;
+        {TAB_IDS.map((id) => {
+          const active = tab === id;
+          const { label, icon: Icon } = TAB_META[id];
           return (
-            <button key={it.id} onClick={() => setTab(it.id)} className="flex flex-col items-center gap-1 py-3">
+            <button key={id} onClick={() => setTab(id)} className="flex flex-col items-center gap-1 py-3">
               <Icon size={20} color={active ? PALETTE.primary : PALETTE.steelDim} />
               <span style={{ fontFamily: FONT_BODY, fontSize: 10, color: active ? PALETTE.primary : PALETTE.steelDim }}>
-                {it.label}
+                {label}
               </span>
             </button>
           );

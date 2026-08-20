@@ -6,7 +6,7 @@ import { db } from "./firebase";
 
 import GlobalStyles from "./theme/GlobalStyles";
 import { PALETTE, FONT_BODY, FONT_MONO, vehicleColorMap } from "./theme/palette";
-import { CONTENT_MAX_WIDTH } from "./lib/constants";
+import { CONTENT_MAX_WIDTH, TAB_IDS } from "./lib/constants";
 import { uid } from "./lib/format";
 import { DEFAULT_DATA, migrateData } from "./lib/maintenanceRules";
 import { GEMINI_CONFIGURED } from "./lib/gemini";
@@ -36,6 +36,28 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
   useEffect(() => {
     mainRef.current?.scrollTo(0, 0);
   }, [tab]);
+
+  // Swipe gauche/droite pour changer d'onglet, en plus de la TabBar. On ne
+  // décide qu'au relâchement (touchend), sur le déplacement total — jamais de
+  // preventDefault, pour ne pas gêner le scroll vertical normal de la page.
+  const touchStartRef = useRef(null);
+  const onTouchStart = (e) => {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const SWIPE_THRESHOLD = 60;
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    const idx = TAB_IDS.indexOf(tab);
+    if (dx < 0 && idx < TAB_IDS.length - 1) setTab(TAB_IDS[idx + 1]);
+    else if (dx > 0 && idx > 0) setTab(TAB_IDS[idx - 1]);
+  };
   const [ready, setReady] = useState(false);
   const [showFuelForm, setShowFuelForm] = useState(false);
   const [showMaintForm, setShowMaintForm] = useState(false);
@@ -207,6 +229,8 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
 
       <main
         ref={mainRef}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
         style={{
           width: "100%",
           flex: 1,
