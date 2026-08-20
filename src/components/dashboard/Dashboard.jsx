@@ -4,12 +4,15 @@ import StatCard from "./StatCard";
 import AlertRow from "./AlertRow";
 import MiniRing from "./MiniRing";
 import { PALETTE, FONT_DISPLAY, FONT_BODY, FONT_MONO, statusColor } from "../../theme/palette";
-import { fmtKm } from "../../lib/format";
+import { fmtKm, fmtEuro } from "../../lib/format";
 import { ruleProgress } from "../../lib/maintenanceRules";
 
-export default function Dashboard({ avgConsumption, consumption, maintStatus, fuelCount, maintCount, onGoMaint, vehicles }) {
+export default function Dashboard({ avgConsumption, consumption, maintStatus, fuelCount, maintCount, onGoMaint, vehicles, ownership }) {
   const overdue = maintStatus.filter((m) => m.status === "overdue");
   const soon = maintStatus.filter((m) => m.status === "soon");
+
+  const bestTank = consumption && consumption.length >= 2 ? consumption.reduce((a, b) => (b.value < a.value ? b : a)) : null;
+  const worstTank = consumption && consumption.length >= 2 ? consumption.reduce((a, b) => (b.value > a.value ? b : a)) : null;
 
   const parcourus = (v) => {
     const endKm = v.status === "sold" && v.finalKm != null ? v.finalKm : v.currentKm;
@@ -28,6 +31,37 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
         <StatCard label="Conso. moyenne" value={avgConsumption ? avgConsumption.toFixed(1) : "—"} unit="L/100km" />
         <StatCard label="Pleins enregistrés" value={fuelCount} unit={fuelCount > 1 ? "entrées" : "entrée"} />
       </div>
+
+      {ownership && (fuelCount > 0 || maintCount > 0) && (
+        <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
+          <div style={{ fontFamily: FONT_DISPLAY, fontSize: 13, letterSpacing: "0.08em", color: PALETTE.textMuted }} className="mb-3">
+            COÛT DE POSSESSION
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 17, fontWeight: 700, color: PALETTE.text }}>{fmtEuro(ownership.totalCost, 0)}</div>
+              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Total</div>
+            </div>
+            <div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 17, fontWeight: 700, color: PALETTE.text }}>
+                {ownership.costPerKm != null ? fmtEuro(ownership.costPerKm) : "—"}
+              </div>
+              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Par km</div>
+            </div>
+            <div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 17, fontWeight: 700, color: PALETTE.text }}>
+                {ownership.costPerMonth != null ? fmtEuro(ownership.costPerMonth, 0) : "—"}
+              </div>
+              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Par mois</div>
+            </div>
+          </div>
+          {ownership.costPerMonth == null && (
+            <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mt-2">
+              Renseigne la date d'achat dans Réglages → Ma moto pour voir le coût mensuel.
+            </div>
+          )}
+        </div>
+      )}
 
       {consumption && consumption.length >= 2 && (
         <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
@@ -49,6 +83,16 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
                 <Line type="monotone" dataKey="value" stroke={PALETTE.amber} strokeWidth={2} dot={{ r: 3, fill: PALETTE.amber }} isAnimationActive={false} />
               </LineChart>
             </ResponsiveContainer>
+          </div>
+          <div className="flex justify-between mt-3 pt-3" style={{ borderTop: `1px solid ${PALETTE.hairline}` }}>
+            <div>
+              <div style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: PALETTE.ok }}>{bestTank.value.toFixed(1)} L/100km</div>
+              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Meilleur plein · {fmtKm(bestTank.km)} km</div>
+            </div>
+            <div className="text-right">
+              <div style={{ fontFamily: FONT_MONO, fontSize: 15, fontWeight: 700, color: PALETTE.danger }}>{worstTank.value.toFixed(1)} L/100km</div>
+              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Pire plein · {fmtKm(worstTank.km)} km</div>
+            </div>
           </div>
         </div>
       )}

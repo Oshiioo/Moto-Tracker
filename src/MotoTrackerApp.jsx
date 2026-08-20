@@ -7,7 +7,7 @@ import { db } from "./firebase";
 import GlobalStyles from "./theme/GlobalStyles";
 import { PALETTE, FONT_BODY, FONT_MONO } from "./theme/palette";
 import { CONTENT_MAX_WIDTH } from "./lib/constants";
-import { uid } from "./lib/format";
+import { uid, monthsBetween } from "./lib/format";
 import { DEFAULT_DATA, migrateData } from "./lib/maintenanceRules";
 import { GEMINI_CONFIGURED } from "./lib/gemini";
 
@@ -129,6 +129,18 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
     return recent.reduce((s, c) => s + c.value, 0) / recent.length;
   }, [consumption]);
 
+  const ownership = useMemo(() => {
+    if (!data) return null;
+    const totalCost = data.fuel.reduce((s, f) => s + (Number(f.price) || 0), 0) + data.maintenance.reduce((s, m) => s + (Number(m.cost) || 0), 0);
+    const kmSinceAcquisition = Math.max(0, data.vehicle.currentKm - (data.vehicle.acquisitionKm || 0));
+    const months = data.vehicle.acquisitionDate ? monthsBetween(data.vehicle.acquisitionDate) : null;
+    return {
+      totalCost,
+      costPerKm: kmSinceAcquisition > 0 ? totalCost / kmSinceAcquisition : null,
+      costPerMonth: months ? totalCost / months : null,
+    };
+  }, [data]);
+
   const maintStatus = useMemo(() => {
     if (!data) return [];
     const currentKm = data.vehicle.currentKm;
@@ -219,6 +231,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
             maintCount={data.maintenance.length}
             onGoMaint={() => setTab("maintenance")}
             vehicles={vehicles}
+            ownership={ownership}
           />
         )}
 
