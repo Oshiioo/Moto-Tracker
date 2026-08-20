@@ -1,10 +1,12 @@
-import { useState, useRef } from "react";
-import { Camera } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Camera, Mic, Square } from "lucide-react";
 import Modal from "../ui/Modal";
 import Field from "../ui/Field";
 import { PALETTE, FONT_BODY, inputStyle, submitStyle, aiButtonStyle } from "../../theme/palette";
 import { geminiExtract, fileToBase64, GEMINI_CONFIGURED } from "../../lib/gemini";
 import { normalizeType, EXTRA_KNOWN_TYPES } from "../../lib/typeNormalization";
+
+const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 export default function QuickAddModal({ rules, defaultKm, onClose, onAddFuel, onAddMaintenance }) {
   const [stage, setStage] = useState("input"); // input | review
@@ -13,7 +15,41 @@ export default function QuickAddModal({ rules, defaultKm, onClose, onAddFuel, on
   const [error, setError] = useState("");
   const [kind, setKind] = useState("fuel");
   const [form, setForm] = useState({});
+  const [listening, setListening] = useState(false);
   const fileRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const baseTextRef = useRef("");
+
+  useEffect(() => () => recognitionRef.current?.stop(), []);
+
+  const toggleListening = () => {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = "fr-FR";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    baseTextRef.current = text.trim();
+    recognition.onresult = (e) => {
+      let transcript = "";
+      for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+      setText(baseTextRef.current ? `${baseTextRef.current} ${transcript}` : transcript);
+    };
+    recognition.onerror = (e) => {
+      if (e.error !== "no-speech" && e.error !== "aborted") {
+        setError(e.error === "not-allowed" ? "Micro refusé, vérifie les autorisations" : "Échec de la dictée, réessaie");
+        setStatus("error");
+      }
+    };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    setListening(true);
+    setStatus("idle");
+    setError("");
+    recognition.start();
+  };
 
   const ruleNames = rules.map((r) => r.name);
   const pickerRuleNames = rules.filter((r) => !r.hideFromPicker).map((r) => r.name);
@@ -94,9 +130,34 @@ Un plein d'essence évoque des litres ou de l'essence. Un entretien évoque une 
           <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-3">
             Décris ce qui vient de se passer — un plein ou un entretien — je détecte automatiquement lequel.
           </div>
+          {SpeechRecognitionCtor && (
+            <button
+              type="button"
+              onClick={toggleListening}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                width: "100%",
+                padding: "12px",
+                borderRadius: 10,
+                marginBottom: 10,
+                fontFamily: FONT_BODY,
+                fontSize: 13,
+                fontWeight: 600,
+                border: `1px solid ${listening ? PALETTE.amber : PALETTE.hairline}`,
+                background: listening ? PALETTE.amber : PALETTE.surface,
+                color: listening ? "#1B1A17" : PALETTE.text,
+              }}
+            >
+              {listening ? <Square size={16} /> : <Mic size={16} />}
+              {listening ? "Écoute… (touche pour arrêter)" : "Dicter"}
+            </button>
+          )}
           <textarea
             style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-            placeholder="Appuie sur le micro de ton clavier, ex. « plein de 12 litres, 22 euros, 69 100 kilomètres » ou « graissage chaîne fait aujourd'hui »"
+            placeholder="Ex. « plein de 12 litres, 22 euros, 69 100 kilomètres » ou « graissage chaîne fait aujourd'hui »"
             value={text}
             onChange={(e) => setText(e.target.value)}
             autoFocus
