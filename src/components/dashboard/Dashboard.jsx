@@ -212,9 +212,22 @@ function PleinsStatCard({ allVehicles, defaultId }) {
 
 function CoutDeSuiviCard({ allVehicles, defaultId }) {
   const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  if (resolved.length === 0) return null;
   const withData = resolved.filter((v) => v.fuelCount > 0 || v.maintCount > 0);
-  if (withData.length === 0) return null;
   const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
+
+  if (withData.length === 0) {
+    return (
+      <div key={valid} style={{ ...cardStyle(PALETTE.hairline, true), animation: "tabContentIn 200ms ease" }}>
+        <div className="flex items-start justify-between">
+          <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
+            Pas encore de plein ni d'entretien enregistré pour calculer un coût.
+          </div>
+          {switcher}
+        </div>
+      </div>
+    );
+  }
 
   if (resolved.length === 1) {
     const v = resolved[0];
@@ -284,9 +297,22 @@ function CoutDeSuiviCard({ allVehicles, defaultId }) {
 
 function ConsommationCard({ allVehicles, defaultId }) {
   const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  if (resolved.length === 0) return null;
   const withConsumption = resolved.filter((v) => v.consumption.length >= 2);
-  if (withConsumption.length === 0) return null;
   const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
+
+  if (withConsumption.length === 0) {
+    return (
+      <div key={valid} style={{ ...cardStyle(PALETTE.hairline, true), animation: "tabContentIn 200ms ease" }}>
+        <div className="flex items-start justify-between">
+          <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
+            Pas encore assez de pleins enregistrés pour calculer une consommation.
+          </div>
+          {switcher}
+        </div>
+      </div>
+    );
+  }
 
   if (resolved.length === 1) {
     const v = resolved[0];
