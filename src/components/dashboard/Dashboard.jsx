@@ -4,7 +4,7 @@ import StatCard from "./StatCard";
 import AlertRow from "./AlertRow";
 import MiniRing from "./MiniRing";
 import { PALETTE, FONT_BODY, FONT_MONO, statusColor, cardStyle, sectionLabelStyle } from "../../theme/palette";
-import { fmtKm, fmtEuro } from "../../lib/format";
+import { fmtKm, fmtEuro, fmtDate } from "../../lib/format";
 import { ruleProgress } from "../../lib/maintenanceRules";
 
 export default function Dashboard({ avgConsumption, consumption, maintStatus, fuelCount, maintCount, onGoMaint, vehicles, ownership }) {
@@ -35,7 +35,7 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
       {ownership && (fuelCount > 0 || maintCount > 0) && (
         <div style={cardStyle()}>
           <div style={sectionLabelStyle} className="mb-3">
-            COÛT DE POSSESSION
+            COÛT DE SUIVI{ownership.trackedSince ? ` · DEPUIS LE ${fmtDate(ownership.trackedSince).toUpperCase()}` : ""}
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div>
@@ -55,11 +55,9 @@ export default function Dashboard({ avgConsumption, consumption, maintStatus, fu
               <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Par mois</div>
             </div>
           </div>
-          {ownership.costPerMonth == null && (
-            <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mt-2">
-              Renseigne la date d'achat dans Réglages → Ma moto pour voir le coût mensuel.
-            </div>
-          )}
+          <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mt-2">
+            Basé sur les pleins et entretiens enregistrés dans l'app, pas sur toute la durée de possession.
+          </div>
         </div>
       )}
 

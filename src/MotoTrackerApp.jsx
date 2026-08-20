@@ -141,12 +141,22 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
   const ownership = useMemo(() => {
     if (!data) return null;
     const totalCost = data.fuel.reduce((s, f) => s + (Number(f.price) || 0), 0) + data.maintenance.reduce((s, m) => s + (Number(m.cost) || 0), 0);
-    const kmSinceAcquisition = Math.max(0, data.vehicle.currentKm - (data.vehicle.acquisitionKm || 0));
-    const months = data.vehicle.acquisitionDate ? monthsBetween(data.vehicle.acquisitionDate) : null;
+    // Le coût ne couvre que ce qui a été saisi dans l'app : on rapporte le
+    // total aux km/mois écoulés depuis la 1ère saisie, pas depuis l'achat,
+    // sinon le coût/km et coût/mois sont sous-évalués si le suivi a démarré
+    // après l'achat de la moto.
+    const entries = [...data.fuel, ...data.maintenance].filter((e) => e.date);
+    if (entries.length === 0) {
+      return { totalCost, costPerKm: null, costPerMonth: null, trackedSince: null };
+    }
+    const earliest = entries.reduce((a, b) => (new Date(b.date) < new Date(a.date) ? b : a));
+    const kmTracked = Math.max(0, data.vehicle.currentKm - (earliest.km ?? 0));
+    const months = monthsBetween(earliest.date);
     return {
       totalCost,
-      costPerKm: kmSinceAcquisition > 0 ? totalCost / kmSinceAcquisition : null,
-      costPerMonth: months ? totalCost / months : null,
+      costPerKm: kmTracked > 0 ? totalCost / kmTracked : null,
+      costPerMonth: months > 0 ? totalCost / months : null,
+      trackedSince: earliest.date,
     };
   }, [data]);
 
