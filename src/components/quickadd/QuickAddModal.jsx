@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import { Camera, Mic, Square } from "lucide-react";
 import Modal from "../ui/Modal";
 import Field from "../ui/Field";
@@ -39,10 +39,15 @@ export default function QuickAddModal({ rules, defaultKm, onClose, onAddFuel, on
     };
     recognition.onend = () => setListening(false);
     recognitionRef.current = recognition;
-    setListening(true);
     setStatus("idle");
     setError("");
-    recognition.start();
+    try {
+      recognition.start();
+      setListening(true);
+    } catch {
+      setError("Impossible de démarrer le micro, tape sur Dicter");
+      setStatus("error");
+    }
   };
 
   const toggleListening = () => {
@@ -55,8 +60,15 @@ export default function QuickAddModal({ rules, defaultKm, onClose, onAddFuel, on
 
   // Démarre l'écoute automatiquement à l'ouverture — la modale n'a que cet
   // usage (dictée rapide), pas besoin d'un tap supplémentaire ni du clavier.
-  useEffect(() => {
+  // useLayoutEffect (plutôt que useEffect) pour rester au plus près du geste
+  // utilisateur qui a ouvert la modale : certains navigateurs exigent un
+  // appel à start() encore rattaché à l'activation utilisateur d'origine.
+  useLayoutEffect(() => {
     if (SpeechRecognitionCtor) startListening();
+    else {
+      setError("Dictée vocale non supportée par ce navigateur, tape ton texte");
+      setStatus("error");
+    }
     return () => recognitionRef.current?.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
