@@ -50,7 +50,7 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
   const ownershipEndDate = status === "sold" ? saleDate : status === "archived" ? archiveDate : undefined;
 
   return (
-    <div style={cardStyle()}>
+    <div style={{ ...cardStyle(), height: "100%" }}>
       <Field label="Nom de la moto">
         <input style={inputStyle} type="text" value={name} onChange={(e) => setName(e.target.value)} />
       </Field>

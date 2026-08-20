@@ -46,12 +46,14 @@ export default function SettingsTab({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex flex-col">
           <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-3">
             Ma moto
           </div>
-          <VehicleEditor vehicle={vehicle} onUpdate={onUpdateVehicle} />
+          <div className="flex-1">
+            <VehicleEditor vehicle={vehicle} onUpdate={onUpdateVehicle} />
+          </div>
         </div>
 
         <div>
