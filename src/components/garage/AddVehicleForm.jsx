@@ -4,6 +4,45 @@ import Field from "../ui/Field";
 import { PALETTE, FONT_BODY, inputStyle, submitStyle, aiButtonStyle } from "../../theme/palette";
 import { uid } from "../../lib/format";
 import { geminiSearchExtract, GEMINI_CONFIGURED } from "../../lib/gemini";
+import { normalizeType } from "../../lib/typeNormalization";
+
+// Valeurs de départ génériques (pas spécifiques à une marque) — proposées à
+// chaque ajout de moto pour que la liste ne soit jamais vide, y compris quand
+// la recherche IA ne trouve rien (modèle récent/rare, quota, hors ligne...).
+const GENERIC_SUGGESTIONS = [
+  { name: "Vidange", intervalKm: 10000, intervalMonths: 12 },
+  { name: "Filtre à air", intervalKm: 15000 },
+  { name: "Bougies", intervalKm: 20000 },
+  { name: "Graissage de la chaîne", intervalKm: 1000 },
+  { name: "Tension de la chaîne", intervalKm: 1000 },
+  { name: "Contrôle plaquettes et disques", intervalMonths: 12 },
+  { name: "Purge des liquides de frein", intervalMonths: 24 },
+  { name: "Liquide de refroidissement", intervalMonths: 24 },
+  { name: "Entretien annuel", intervalMonths: 12 },
+];
+
+const toSuggestion = (it) => ({
+  id: uid(),
+  name: it.name,
+  intervalKm: it.intervalKm || "",
+  intervalMonths: it.intervalMonths || "",
+  checked: true,
+});
+
+// Complète la liste courante avec les résultats IA : met à jour l'intervalle
+// d'une entrée existante si le nom correspond (mêmes synonymes que la saisie
+// manuelle), sinon ajoute une nouvelle entrée. Ne supprime jamais rien.
+const mergeSuggestions = (current, items) => {
+  const next = [...current];
+  for (const it of items) {
+    if (!it.name || (!it.intervalKm && !it.intervalMonths)) continue;
+    const matchedName = normalizeType(it.name, next.map((s) => s.name));
+    const idx = next.findIndex((s) => s.name === matchedName);
+    if (idx >= 0) next[idx] = { ...next[idx], intervalKm: it.intervalKm || "", intervalMonths: it.intervalMonths || "", checked: true };
+    else next.push(toSuggestion(it));
+  }
+  return next;
+};
 
 export default function AddVehicleForm({ onSubmit }) {
   const [name, setName] = useState("");
@@ -13,7 +52,7 @@ export default function AddVehicleForm({ onSubmit }) {
   const [currentKm, setCurrentKm] = useState("");
   const [searchStatus, setSearchStatus] = useState("idle"); // idle | busy | done | error
   const [searchError, setSearchError] = useState("");
-  const [suggestions, setSuggestions] = useState([]); // [{ id, name, intervalKm, intervalMonths, checked }]
+  const [suggestions, setSuggestions] = useState(() => GENERIC_SUGGESTIONS.map(toSuggestion)); // [{ id, name, intervalKm, intervalMonths, checked }]
 
   const canSearch = GEMINI_CONFIGURED && brand.trim() && model.trim();
 
@@ -22,22 +61,13 @@ export default function AddVehicleForm({ onSubmit }) {
     setSearchError("");
     const promptText = `Cherche sur le web les préconisations d'entretien constructeur (plan de maintenance officiel) pour une moto ${brand.trim()} ${model.trim()} ${year.trim()}. Réponds uniquement avec un objet JSON strict, sans texte ni markdown autour, de cette forme exacte :
 {"items": [{"name": "Vidange", "intervalKm": 12000, "intervalMonths": null}, ...]}
-Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, Bougies, Graissage de la chaîne, Tension de la chaîne, Contrôle plaquettes et disques, Purge des liquides de frein, Liquide de refroidissement, Entretien annuel — sinon un nom court et clair. intervalKm et intervalMonths sont des nombres ou null (au moins un des deux renseigné par entrée). N'inclus que les intervalles dont tu es raisonnablement sûr à partir de sources fiables (constructeur, notices, revendeurs officiels).`;
+Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, Bougies, Graissage de la chaîne, Tension de la chaîne, Contrôle plaquettes et disques, Purge des liquides de frein, Liquide de refroidissement, Entretien annuel — sinon un nom court et clair. intervalKm et intervalMonths sont des nombres ou null (au moins un des deux renseigné par entrée). Si tu ne trouves pas de valeur constructeur fiable pour un poste, ignore-le plutôt que d'inventer un chiffre.`;
     try {
       const result = await geminiSearchExtract(promptText);
       const items = Array.isArray(result?.items) ? result.items : [];
-      setSuggestions(
-        items
-          .filter((it) => it.name && (it.intervalKm || it.intervalMonths))
-          .map((it) => ({
-            id: uid(),
-            name: it.name,
-            intervalKm: it.intervalKm || "",
-            intervalMonths: it.intervalMonths || "",
-            checked: true,
-          }))
-      );
+      setSuggestions((current) => mergeSuggestions(current, items));
       setSearchStatus("done");
+      if (items.length === 0) setSearchError("Aucune préconisation constructeur trouvée pour ce modèle — la liste ci-dessous reste éditable manuellement.");
     } catch (e) {
       setSearchError(e.message || "Échec de la recherche, réessaie");
       setSearchStatus("error");
@@ -79,7 +109,7 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
       </Field>
 
       <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-2 mt-1">
-        Optionnel : recherche automatique des intervalles d'entretien constructeur.
+        Une liste d'entretiens générique est proposée plus bas, à corriger librement. Optionnel : renseigne la marque/le modèle pour l'affiner via une recherche des préconisations constructeur.
       </div>
       <div className="flex gap-2 mb-2">
         <input style={{ ...inputStyle, flex: 1 }} type="text" placeholder="Marque" value={brand} onChange={(e) => setBrand(e.target.value)} />
@@ -105,7 +135,7 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
           Assistant IA non configuré — la recherche n'est pas disponible, tu peux ajouter les intervalles manuellement après coup.
         </div>
       )}
-      {searchStatus === "error" && (
+      {searchError && (
         <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.danger }} className="mb-3">
           {searchError}
         </div>
@@ -125,7 +155,9 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
             }}
             className="mb-2"
           >
-            ⚠ Intervalles générés automatiquement via recherche web — à vérifier auprès du constructeur ou de la notice avant de t'y fier. Décoche ou corrige ce qui te semble incertain.
+            {searchStatus === "done"
+              ? "⚠ Intervalles complétés via recherche web — à vérifier auprès du constructeur ou de la notice avant de t'y fier. Décoche ou corrige ce qui te semble incertain."
+              : "⚠ Valeurs génériques de départ, non spécifiques à ta moto — à corriger ou décocher. Renseigne marque/modèle ci-dessus pour tenter de les affiner automatiquement."}
           </div>
           <div className="space-y-2">
             {suggestions.map((s) => (
