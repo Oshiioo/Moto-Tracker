@@ -315,7 +315,7 @@ function ConsommationCard({ allVehicles, defaultId }) {
         <div style={{ height: 140, position: "relative" }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={EMPTY_CHART_PLACEHOLDER} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-              <XAxis dataKey="km" tick={false} tickLine={false} axisLine={{ stroke: PALETTE.hairline }} />
+              <XAxis dataKey="km" height={1} tick={false} tickLine={false} axisLine={{ stroke: PALETTE.hairline }} />
               <YAxis tick={false} tickLine={false} axisLine={false} width={30} />
             </LineChart>
           </ResponsiveContainer>
