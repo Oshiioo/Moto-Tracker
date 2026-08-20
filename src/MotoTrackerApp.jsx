@@ -34,7 +34,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
   const [ready, setReady] = useState(false);
   const [showFuelForm, setShowFuelForm] = useState(false);
   const [showMaintForm, setShowMaintForm] = useState(false);
-  const [showRuleForm, setShowRuleForm] = useState(false);
+  const [ruleModal, setRuleModal] = useState(null); // null | "new" | règle en édition
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
@@ -100,7 +100,12 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
 
   const addRule = (rule) => {
     persist({ ...data, rules: [...data.rules, { id: uid(), ...rule }] });
-    setShowRuleForm(false);
+    setRuleModal(null);
+  };
+
+  const updateRule = (id, patch) => {
+    persist({ ...data, rules: data.rules.map((r) => (r.id === id ? { ...r, ...patch } : r)) });
+    setRuleModal(null);
   };
 
   const deleteItem = (list, id) => persist({ ...data, [list]: data[list].filter((i) => i.id !== id) });
@@ -265,7 +270,8 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
               onRequestAddVehicle={() => setShowAddVehicleForm(true)}
               onDeleteVehicle={onDeleteVehicle}
               rules={data.rules}
-              onAddRule={() => setShowRuleForm(true)}
+              onAddRule={() => setRuleModal("new")}
+              onEditRule={(rule) => setRuleModal(rule)}
               onDeleteRule={(id) => deleteItem("rules", id)}
               apiKeyConfigured={GEMINI_CONFIGURED}
               userEmail={user.email}
@@ -288,9 +294,12 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
           <MaintenanceForm onSubmit={addMaintenance} defaultKm={data.vehicle.currentKm} rules={data.rules} />
         </Modal>
       )}
-      {showRuleForm && (
-        <Modal title="Nouveau type d'entretien" onClose={() => setShowRuleForm(false)}>
-          <RuleForm onSubmit={addRule} />
+      {ruleModal && (
+        <Modal title={ruleModal === "new" ? "Nouveau type d'entretien" : "Modifier l'entretien"} onClose={() => setRuleModal(null)}>
+          <RuleForm
+            initialRule={ruleModal === "new" ? null : ruleModal}
+            onSubmit={(values) => (ruleModal === "new" ? addRule(values) : updateRule(ruleModal.id, values))}
+          />
         </Modal>
       )}
       {showAddVehicleForm && (

@@ -16,6 +16,7 @@ export default function SettingsTab({
   onDeleteVehicle,
   rules,
   onAddRule,
+  onEditRule,
   onDeleteRule,
   apiKeyConfigured,
   userEmail,
@@ -54,14 +55,16 @@ export default function SettingsTab({
         <div className="space-y-2">
           {rules.map((r) => (
             <Card key={r.id} onDelete={() => onDeleteRule(r.id)} confirmLabel={`le suivi « ${r.name} » (et son rappel associé)`}>
-              <div className="flex justify-between items-center">
-                <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{r.name}</span>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
-                  {[r.intervalKm ? `${fmtKm(r.intervalKm)} km` : null, r.intervalMonths ? `${r.intervalMonths} mois` : null]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </span>
-              </div>
+              <button type="button" onClick={() => onEditRule(r)} style={{ width: "100%", textAlign: "left", display: "block" }}>
+                <div className="flex justify-between items-center">
+                  <span style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.text }}>{r.name}</span>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.textMuted }}>
+                    {[r.intervalKm ? `${fmtKm(r.intervalKm)} km` : null, r.intervalMonths ? `${r.intervalMonths} mois` : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </div>
+              </button>
             </Card>
           ))}
         </div>

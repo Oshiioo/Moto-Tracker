@@ -2,8 +2,12 @@ import { useState } from "react";
 import Field from "../ui/Field";
 import { PALETTE, FONT_BODY, inputStyle, submitStyle } from "../../theme/palette";
 
-export default function RuleForm({ onSubmit }) {
-  const [form, setForm] = useState({ name: "", intervalKm: "", intervalMonths: "" });
+export default function RuleForm({ onSubmit, initialRule }) {
+  const [form, setForm] = useState({
+    name: initialRule?.name || "",
+    intervalKm: initialRule?.intervalKm ? String(initialRule.intervalKm) : "",
+    intervalMonths: initialRule?.intervalMonths ? String(initialRule.intervalMonths) : "",
+  });
   const canSubmit = form.name && (form.intervalKm || form.intervalMonths);
   return (
     <form
@@ -29,7 +33,7 @@ export default function RuleForm({ onSubmit }) {
       <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mb-2">
         Renseigne au moins un des deux. L'alerte se déclenchera sur celui qui arrive en premier.
       </div>
-      <button type="submit" style={submitStyle} disabled={!canSubmit}>Ajouter</button>
+      <button type="submit" style={submitStyle} disabled={!canSubmit}>{initialRule ? "Enregistrer" : "Ajouter"}</button>
     </form>
   );
 }
