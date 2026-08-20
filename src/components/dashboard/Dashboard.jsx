@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, Cell } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell } from "recharts";
 import { CheckCircle2, ChevronDown, LineChart as LineChartIcon } from "lucide-react";
 import StatCard from "./StatCard";
 import AlertRow from "./AlertRow";
@@ -135,6 +135,10 @@ function buildConsumptionSeries(vehicles) {
     return row;
   });
 }
+
+// Deux points fictifs, juste pour donner un domaine d'axes au graphe "vide"
+// affiché quand une moto n'a pas encore assez de pleins pour une vraie courbe.
+const EMPTY_CHART_PLACEHOLDER = [{ km: 0 }, { km: 1 }];
 
 function ConsoStatCard({ allVehicles, defaultId }) {
   const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
@@ -308,10 +312,19 @@ function ConsommationCard({ allVehicles, defaultId }) {
           <div style={sectionLabelStyle}>CONSOMMATION</div>
           {switcher}
         </div>
-        <div style={{ height: 140 }} className="flex flex-col items-center justify-center text-center gap-2">
-          <LineChartIcon size={28} color={PALETTE.steelDim} strokeWidth={1.5} />
-          <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.textMuted, maxWidth: 220 }}>
-            Pas encore assez de pleins enregistrés pour calculer une consommation.
+        <div style={{ height: 140, position: "relative" }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={EMPTY_CHART_PLACEHOLDER} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+              <CartesianGrid stroke={PALETTE.hairline} strokeDasharray="4 4" />
+              <XAxis dataKey="km" tick={false} axisLine={false} tickLine={false} />
+              <YAxis tick={false} axisLine={false} tickLine={false} width={30} />
+            </LineChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-2">
+            <LineChartIcon size={26} color={PALETTE.steelDim} strokeWidth={1.5} />
+            <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.textMuted, maxWidth: 220 }}>
+              Pas encore assez de pleins enregistrés pour calculer une consommation.
+            </div>
           </div>
         </div>
       </div>
