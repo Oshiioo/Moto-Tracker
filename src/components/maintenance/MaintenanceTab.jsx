@@ -1,8 +1,10 @@
+import { Wrench } from "lucide-react";
 import SectionHeader from "../ui/SectionHeader";
 import EmptyState from "../ui/EmptyState";
 import Card from "../ui/Card";
+import IconBadge from "../ui/IconBadge";
 import StatusPill from "./StatusPill";
-import { PALETTE, FONT_BODY, FONT_MONO, cardStyle, sectionLabelStyle } from "../../theme/palette";
+import { PALETTE, FONT_BODY, FONT_MONO, cardStyle, sectionLabelStyle, statusColor } from "../../theme/palette";
 import { fmtKm, fmtDate } from "../../lib/format";
 
 export default function MaintenanceTab({ statuses, history, onAdd, onDelete }) {
@@ -16,14 +18,19 @@ export default function MaintenanceTab({ statuses, history, onAdd, onDelete }) {
               key={s.id}
               style={cardStyle(s.status !== "ok" ? (s.status === "overdue" ? PALETTE.danger : PALETTE.yellow) : PALETTE.hairline)}
             >
-              <div className="flex justify-between items-center">
-                <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: PALETTE.text }}>{s.name}</span>
-                <StatusPill status={s.status} />
-              </div>
-              <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mt-1">
-                {s.lastKm != null ? `Dernier : ${fmtKm(s.lastKm)} km (${fmtDate(s.lastDate)})` : "Jamais renseigné"}
-                {s.nextDueKm != null ? ` · Prochain à ${fmtKm(s.nextDueKm)} km` : ""}
-                {s.nextDueDate != null ? ` · avant le ${fmtDate(s.nextDueDate)}` : ""}
+              <div className="flex items-start gap-3">
+                <IconBadge icon={Wrench} color={statusColor(s.status)} />
+                <div className="flex-1">
+                  <div className="flex justify-between items-center">
+                    <span style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: PALETTE.text }}>{s.name}</span>
+                    <StatusPill status={s.status} />
+                  </div>
+                  <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mt-1">
+                    {s.lastKm != null ? `Dernier : ${fmtKm(s.lastKm)} km (${fmtDate(s.lastDate)})` : "Jamais renseigné"}
+                    {s.nextDueKm != null ? ` · Prochain à ${fmtKm(s.nextDueKm)} km` : ""}
+                    {s.nextDueDate != null ? ` · avant le ${fmtDate(s.nextDueDate)}` : ""}
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -40,13 +47,16 @@ export default function MaintenanceTab({ statuses, history, onAdd, onDelete }) {
           <div className="space-y-2">
             {history.map((m) => (
               <Card key={m.id} onDelete={() => onDelete(m.id)} confirmLabel={`« ${m.type} » du ${fmtDate(m.date)}`}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: PALETTE.text }}>{m.type}</div>
-                    <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }}>{fmtDate(m.date)} · {fmtKm(m.km)} km</div>
-                    {m.note && <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mt-1">{m.note}</div>}
+                <div className="flex items-start gap-3">
+                  <IconBadge icon={Wrench} color={PALETTE.steel} />
+                  <div className="flex justify-between items-start flex-1">
+                    <div>
+                      <div style={{ fontFamily: FONT_BODY, fontWeight: 500, fontSize: 14, color: PALETTE.text }}>{m.type}</div>
+                      <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }}>{fmtDate(m.date)} · {fmtKm(m.km)} km</div>
+                      {m.note && <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mt-1">{m.note}</div>}
+                    </div>
+                    {m.cost && <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.text }}>{m.cost} €</div>}
                   </div>
-                  {m.cost && <div style={{ fontFamily: FONT_MONO, fontSize: 13, color: PALETTE.text }}>{m.cost} €</div>}
                 </div>
               </Card>
             ))}

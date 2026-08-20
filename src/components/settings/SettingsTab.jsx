@@ -43,7 +43,7 @@ export default function SettingsTab({
       </div>
 
       <div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-2">
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-3">
           Ma moto
         </div>
         <VehicleEditor vehicle={vehicle} onUpdate={onUpdateVehicle} />
@@ -68,7 +68,7 @@ export default function SettingsTab({
       </div>
 
       <div>
-        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-2">
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-3">
           Saisie par photo / voix
         </div>
         <div style={cardStyle()}>
