@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import Field from "../ui/Field";
-import { PALETTE, inputStyle, submitStyle } from "../../theme/palette";
+import { PALETTE, FONT_BODY, inputStyle, submitStyle } from "../../theme/palette";
+import { fmtKm, fmtDuration } from "../../lib/format";
 
 export default function VehicleEditor({ vehicle, onUpdate }) {
   const [name, setName] = useState(vehicle.name);
   const [km, setKm] = useState(String(vehicle.currentKm));
   const [status, setStatus] = useState(vehicle.status || "active");
   const [acquisitionKm, setAcquisitionKm] = useState(String(vehicle.acquisitionKm || 0));
+  const [acquisitionDate, setAcquisitionDate] = useState(vehicle.acquisitionDate || "");
   const [saleDate, setSaleDate] = useState(vehicle.saleDate || new Date().toISOString().slice(0, 10));
   const [finalKm, setFinalKm] = useState(String(vehicle.finalKm ?? vehicle.currentKm));
   const [archiveReason, setArchiveReason] = useState(vehicle.archiveReason || "Accidentée");
@@ -18,19 +20,25 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
     setKm(String(vehicle.currentKm));
     setStatus(vehicle.status || "active");
     setAcquisitionKm(String(vehicle.acquisitionKm || 0));
+    setAcquisitionDate(vehicle.acquisitionDate || "");
     setSaleDate(vehicle.saleDate || new Date().toISOString().slice(0, 10));
     setFinalKm(String(vehicle.finalKm ?? vehicle.currentKm));
     setArchiveReason(vehicle.archiveReason || "Accidentée");
     setArchiveDate(vehicle.archiveDate || new Date().toISOString().slice(0, 10));
-  }, [vehicle.name, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.saleDate, vehicle.finalKm, vehicle.archiveReason, vehicle.archiveDate]);
+  }, [vehicle.name, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.acquisitionDate, vehicle.saleDate, vehicle.finalKm, vehicle.archiveReason, vehicle.archiveDate]);
 
   const dirty =
     name !== vehicle.name ||
     Number(km) !== vehicle.currentKm ||
     status !== (vehicle.status || "active") ||
     Number(acquisitionKm) !== (vehicle.acquisitionKm || 0) ||
+    acquisitionDate !== (vehicle.acquisitionDate || "") ||
     (status === "sold" && (saleDate !== vehicle.saleDate || Number(finalKm) !== vehicle.finalKm)) ||
     (status === "archived" && (archiveReason !== vehicle.archiveReason || archiveDate !== vehicle.archiveDate || Number(finalKm) !== vehicle.finalKm));
+
+  const endKm = status === "sold" || status === "archived" ? Number(finalKm) : vehicle.currentKm;
+  const kmSinceAcquisition = Math.max(0, endKm - Number(acquisitionKm || 0));
+  const ownershipEndDate = status === "sold" ? saleDate : status === "archived" ? archiveDate : undefined;
 
   return (
     <div style={{ background: PALETTE.surface, border: `1px solid ${PALETTE.hairline}`, borderRadius: 10 }} className="p-4">
@@ -43,6 +51,14 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
       <Field label="Kilométrage d'acquisition — pour calculer les km réellement parcourus">
         <input style={inputStyle} type="number" value={acquisitionKm} onChange={(e) => setAcquisitionKm(e.target.value)} />
       </Field>
+      <Field label="Date d'achat">
+        <input style={inputStyle} type="date" value={acquisitionDate} onChange={(e) => setAcquisitionDate(e.target.value)} />
+      </Field>
+      {acquisitionDate && (
+        <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-3">
+          {status === "active" ? "Possédée depuis" : "Possédée pendant"} {fmtDuration(acquisitionDate, ownershipEndDate)} · {fmtKm(kmSinceAcquisition)} km parcourus
+        </div>
+      )}
       <Field label="Statut">
         <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="active">Active</option>
@@ -85,6 +101,7 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
             currentKm: Number(km),
             status,
             acquisitionKm: Number(acquisitionKm),
+            acquisitionDate: acquisitionDate || null,
             ...(status === "sold" ? { saleDate, finalKm: Number(finalKm) } : { saleDate: null }),
             ...(status === "archived" ? { archiveReason, archiveDate, finalKm: Number(finalKm) } : { archiveReason: null, archiveDate: null }),
             ...(status === "active" ? { finalKm: null } : {}),

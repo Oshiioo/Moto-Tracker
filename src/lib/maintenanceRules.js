@@ -118,6 +118,9 @@ export function migrateData(loaded) {
       },
     };
   }
+  if (next.vehicle.acquisitionDate === undefined) {
+    next = { ...next, vehicle: { ...next.vehicle, acquisitionDate: null } };
+  }
   return next;
 }
 

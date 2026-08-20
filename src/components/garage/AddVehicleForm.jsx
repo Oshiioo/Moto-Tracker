@@ -58,6 +58,7 @@ export default function AddVehicleForm({ onSubmit }) {
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
   const [currentKm, setCurrentKm] = useState("");
+  const [acquisitionDate, setAcquisitionDate] = useState(new Date().toISOString().slice(0, 10));
   const [searchStatus, setSearchStatus] = useState("idle"); // idle | busy | done | error
   const [searchError, setSearchError] = useState("");
   const [suggestions, setSuggestions] = useState(() => GENERIC_SUGGESTIONS.map(toSuggestion)); // [{ id, name, intervalKm, intervalMonths, checked }]
@@ -104,7 +105,7 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
             ...(s.intervalKm ? { intervalKm: Number(s.intervalKm) } : {}),
             ...(s.intervalMonths ? { intervalMonths: Number(s.intervalMonths) } : {}),
           }));
-        onSubmit(name.trim(), currentKm, rules);
+        onSubmit(name.trim(), currentKm, rules, acquisitionDate);
       }}
     >
       <Field label="Nom de la moto">
@@ -119,6 +120,9 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
       </Field>
       <Field label="Kilométrage actuel">
         <input style={inputStyle} type="number" placeholder="ex. 0" value={currentKm} onChange={(e) => setCurrentKm(e.target.value)} />
+      </Field>
+      <Field label="Date d'achat">
+        <input style={inputStyle} type="date" value={acquisitionDate} onChange={(e) => setAcquisitionDate(e.target.value)} />
       </Field>
 
       <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-2 mt-1">

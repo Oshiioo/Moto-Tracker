@@ -280,8 +280,8 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       {showAddVehicleForm && (
         <Modal title="Ajouter une moto" onClose={() => setShowAddVehicleForm(false)}>
           <AddVehicleForm
-            onSubmit={(name, currentKm, rules) => {
-              onAddVehicle(name, currentKm, rules);
+            onSubmit={(name, currentKm, rules, acquisitionDate) => {
+              onAddVehicle(name, currentKm, rules, acquisitionDate);
               setShowAddVehicleForm(false);
             }}
           />

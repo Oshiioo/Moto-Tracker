@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import ConfirmModal from "../ui/ConfirmModal";
 import { PALETTE, FONT_BODY, FONT_MONO } from "../../theme/palette";
-import { fmtKm } from "../../lib/format";
+import { fmtKm, fmtDuration } from "../../lib/format";
 
 export default function GarageRow({ vehicle, active, onSwitch, onDelete, deletable }) {
   const [confirming, setConfirming] = useState(false);
@@ -32,6 +32,7 @@ export default function GarageRow({ vehicle, active, onSwitch, onDelete, deletab
         </div>
         <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted, marginTop: 2 }}>
           {vehicle.status === "sold" && vehicle.finalKm != null ? fmtKm(vehicle.finalKm) : fmtKm(vehicle.currentKm)} km
+          {vehicle.acquisitionDate && ` · possédée depuis ${fmtDuration(vehicle.acquisitionDate, vehicle.saleDate || vehicle.archiveDate || undefined)}`}
         </div>
       </button>
       {deletable && (
