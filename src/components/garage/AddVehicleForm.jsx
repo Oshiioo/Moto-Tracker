@@ -59,6 +59,7 @@ export default function AddVehicleForm({ onSubmit }) {
   const [year, setYear] = useState("");
   const [currentKm, setCurrentKm] = useState("");
   const [acquisitionDate, setAcquisitionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [nextInspectionDate, setNextInspectionDate] = useState("");
   const [searchStatus, setSearchStatus] = useState("idle"); // idle | busy | done | error
   const [searchError, setSearchError] = useState("");
   const [suggestions, setSuggestions] = useState(() => GENERIC_SUGGESTIONS.map(toSuggestion)); // [{ id, name, intervalKm, intervalMonths, checked }]
@@ -110,6 +111,7 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
           currentKm,
           rules,
           acquisitionDate,
+          nextInspectionDate: nextInspectionDate || null,
           brand: brand.trim(),
           model: model.trim(),
           year: year.trim(),
@@ -131,6 +133,9 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
       </Field>
       <Field label="Date d'achat">
         <input style={inputStyle} type="date" value={acquisitionDate} onChange={(e) => setAcquisitionDate(e.target.value)} />
+      </Field>
+      <Field label="Prochain contrôle technique — optionnel">
+        <input style={inputStyle} type="date" value={nextInspectionDate} onChange={(e) => setNextInspectionDate(e.target.value)} />
       </Field>
 
       <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-2 mt-1">

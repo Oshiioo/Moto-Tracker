@@ -12,6 +12,7 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
   const [status, setStatus] = useState(vehicle.status || "active");
   const [acquisitionKm, setAcquisitionKm] = useState(String(vehicle.acquisitionKm || 0));
   const [acquisitionDate, setAcquisitionDate] = useState(vehicle.acquisitionDate || "");
+  const [nextInspectionDate, setNextInspectionDate] = useState(vehicle.nextInspectionDate || "");
   const [saleDate, setSaleDate] = useState(vehicle.saleDate || new Date().toISOString().slice(0, 10));
   const [finalKm, setFinalKm] = useState(String(vehicle.finalKm ?? vehicle.currentKm));
   const [archiveReason, setArchiveReason] = useState(vehicle.archiveReason || "Accidentée");
@@ -27,11 +28,12 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
     setStatus(vehicle.status || "active");
     setAcquisitionKm(String(vehicle.acquisitionKm || 0));
     setAcquisitionDate(vehicle.acquisitionDate || "");
+    setNextInspectionDate(vehicle.nextInspectionDate || "");
     setSaleDate(vehicle.saleDate || new Date().toISOString().slice(0, 10));
     setFinalKm(String(vehicle.finalKm ?? vehicle.currentKm));
     setArchiveReason(vehicle.archiveReason || "Accidentée");
     setArchiveDate(vehicle.archiveDate || new Date().toISOString().slice(0, 10));
-  }, [vehicle.name, vehicle.brand, vehicle.model, vehicle.year, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.acquisitionDate, vehicle.saleDate, vehicle.finalKm, vehicle.archiveReason, vehicle.archiveDate]);
+  }, [vehicle.name, vehicle.brand, vehicle.model, vehicle.year, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.acquisitionDate, vehicle.nextInspectionDate, vehicle.saleDate, vehicle.finalKm, vehicle.archiveReason, vehicle.archiveDate]);
 
   const dirty =
     name !== vehicle.name ||
@@ -42,6 +44,7 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
     status !== (vehicle.status || "active") ||
     Number(acquisitionKm) !== (vehicle.acquisitionKm || 0) ||
     acquisitionDate !== (vehicle.acquisitionDate || "") ||
+    nextInspectionDate !== (vehicle.nextInspectionDate || "") ||
     (status === "sold" && (saleDate !== vehicle.saleDate || Number(finalKm) !== vehicle.finalKm)) ||
     (status === "archived" && (archiveReason !== vehicle.archiveReason || archiveDate !== vehicle.archiveDate || Number(finalKm) !== vehicle.finalKm));
 
@@ -77,6 +80,9 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
             {status === "active" ? "Possédée depuis" : "Possédée pendant"} {fmtDuration(acquisitionDate, ownershipEndDate)} · {fmtKm(kmSinceAcquisition)} km parcourus
           </div>
         )}
+        <Field label="Prochain contrôle technique — optionnel">
+          <input style={inputStyle} type="date" value={nextInspectionDate} onChange={(e) => setNextInspectionDate(e.target.value)} />
+        </Field>
         <Field label="Statut">
           <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="active">Active</option>
@@ -124,6 +130,7 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
             status,
             acquisitionKm: Number(acquisitionKm),
             acquisitionDate: acquisitionDate || null,
+            nextInspectionDate: nextInspectionDate || null,
             ...(status === "sold" ? { saleDate, finalKm: Number(finalKm) } : { saleDate: null }),
             ...(status === "archived" ? { archiveReason, archiveDate, finalKm: Number(finalKm) } : { archiveReason: null, archiveDate: null }),
             ...(status === "active" ? { finalKm: null } : {}),

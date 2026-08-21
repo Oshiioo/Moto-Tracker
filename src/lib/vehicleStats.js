@@ -111,8 +111,34 @@ function computeMaintStatus(data) {
   });
 }
 
+// Contrôle technique : champ dédié sur la fiche moto (pas une règle
+// d'entretien), car il ne dépend jamais du kilométrage, seulement d'une
+// date. intervalMonths est indicatif (périodicité réelle du CT moto
+// récurrent en France) — sert uniquement à l'anneau de progression du
+// dashboard, façonné pour ressembler à une règle d'entretien classique.
+function computeInspectionStatus(vehicle) {
+  if (!vehicle?.nextInspectionDate) return null;
+  const now = new Date();
+  const nextDueDate = new Date(vehicle.nextInspectionDate);
+  const remainingDays = Math.round((nextDueDate - now) / (1000 * 60 * 60 * 24));
+  const status = remainingDays <= 0 ? "overdue" : remainingDays <= 30 ? "soon" : "ok";
+  return {
+    id: "ct",
+    name: "Contrôle technique",
+    intervalKm: null,
+    intervalMonths: 36,
+    lastKm: null,
+    lastDate: null,
+    nextDueKm: null,
+    remainingKm: null,
+    nextDueDate,
+    remainingDays,
+    status,
+  };
+}
+
 export function computeVehicleStats(data, period = "all") {
-  if (!data) return { consumption: [], avgConsumption: null, ownership: null, maintStatus: [] };
+  if (!data) return { consumption: [], avgConsumption: null, ownership: null, maintStatus: [], inspection: null };
   // La consommation par plein a toujours besoin de l'historique complet pour
   // calculer une distance correcte entre 2 pleins consécutifs — on filtre le
   // résultat par période, jamais les données brutes en amont du calcul.
@@ -126,9 +152,10 @@ export function computeVehicleStats(data, period = "all") {
     consumption,
     avgConsumption: computeAvgConsumption(consumption, !!cutoff),
     ownership: computeOwnership(scopedData),
-    // Toujours calculé sur l'historique complet, quelle que soit la période
-    // choisie sur le dashboard : "à surveiller" reflète l'état réel de la
-    // moto, pas une fenêtre temporelle.
+    // maintStatus et inspection sont toujours calculés sur l'état réel de la
+    // moto, quelle que soit la période choisie sur le dashboard — "à
+    // surveiller" ne doit jamais dépendre d'une fenêtre temporelle.
     maintStatus: computeMaintStatus(data),
+    inspection: computeInspectionStatus(data.vehicle),
   };
 }

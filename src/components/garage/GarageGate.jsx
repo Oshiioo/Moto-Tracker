@@ -65,7 +65,7 @@ export default function GarageGate({ user }) {
     localStorage.setItem(activeKey, id);
   };
 
-  const onAddVehicle = async ({ name, currentKm = 0, rules = [], acquisitionDate = null, brand = "", model = "", year = "" }) => {
+  const onAddVehicle = async ({ name, currentKm = 0, rules = [], acquisitionDate = null, nextInspectionDate = null, brand = "", model = "", year = "" }) => {
     const newId = uid();
     const km = Number(currentKm) || 0;
     await setDoc(doc(db, "users", user.uid, "vehicles", newId), {
@@ -75,6 +75,7 @@ export default function GarageGate({ user }) {
         status: "active",
         acquisitionKm: km,
         acquisitionDate,
+        nextInspectionDate,
         brand: brand || null,
         model: model || null,
         year: year || null,

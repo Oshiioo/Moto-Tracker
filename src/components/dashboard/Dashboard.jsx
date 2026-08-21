@@ -192,6 +192,18 @@ function PeriodSwitcher({ value, onChange }) {
   );
 }
 
+// Combine les règles d'entretien en retard/imminentes avec le contrôle
+// technique (champ dédié, pas une règle) pour "À surveiller" — un CT qui
+// approche ne doit jamais être masqué même si l'entretien est par ailleurs
+// à jour ou pas encore renseigné.
+function splitAlerts(v) {
+  const overdue = v.maintStatus.filter((m) => m.status === "overdue");
+  const soon = v.maintStatus.filter((m) => m.status === "soon");
+  if (v.inspection?.status === "overdue") overdue.push(v.inspection);
+  else if (v.inspection?.status === "soon") soon.push(v.inspection);
+  return { overdue, soon };
+}
+
 // Recalcule les stats d'une moto (issues de dashboardVehicles) pour une
 // période donnée, à partir de ses données brutes (v.raw). "all" ne recalcule
 // rien : on réutilise directement les stats déjà calculées côté MotoTrackerApp.
@@ -576,8 +588,7 @@ function ASurveillerCard({ allVehicles, defaultId, onGoMaint }) {
         </div>
         <div className="space-y-4">
           {resolved.map((v) => {
-            const overdue = v.maintStatus.filter((m) => m.status === "overdue");
-            const soon = v.maintStatus.filter((m) => m.status === "soon");
+            const { overdue, soon } = splitAlerts(v);
             return (
               <div key={v.id}>
                 <div className="flex items-center gap-2 mb-2">
@@ -613,8 +624,7 @@ function ASurveillerCard({ allVehicles, defaultId, onGoMaint }) {
   }
 
   const v = resolved[0];
-  const overdue = v.maintStatus.filter((m) => m.status === "overdue");
-  const soon = v.maintStatus.filter((m) => m.status === "soon");
+  const { overdue, soon } = splitAlerts(v);
   const topMaint = [...v.maintStatus]
     .filter((r) => r.intervalKm || r.intervalMonths)
     .sort((a, b) => ruleProgress(b) - ruleProgress(a))
