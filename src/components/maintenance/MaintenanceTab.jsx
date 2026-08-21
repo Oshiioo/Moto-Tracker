@@ -56,7 +56,7 @@ export default function MaintenanceTab({ vehicle, statuses, history, onAdd, onDe
         {history.length === 0 ? (
           <EmptyState text="Aucune intervention enregistrée." />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 pr-1" style={{ maxHeight: 420, overflowY: "auto" }}>
             {history.map((m) => (
               <Card key={m.id} onDelete={() => onDelete(m.id)} confirmLabel={`« ${m.type} » du ${fmtDate(m.date)}`}>
                 <div className="flex items-start gap-3">
