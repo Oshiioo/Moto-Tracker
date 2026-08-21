@@ -62,6 +62,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
   const [showFuelForm, setShowFuelForm] = useState(false);
   const [editingFuel, setEditingFuel] = useState(null);
   const [showMaintForm, setShowMaintForm] = useState(false);
+  const [editingMaint, setEditingMaint] = useState(null);
   const [ruleModal, setRuleModal] = useState(null); // null | "new" | règle en édition
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -150,6 +151,17 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
     };
     persist(next);
     setShowMaintForm(false);
+  };
+
+  const updateMaintenance = (id, patch) => {
+    const km = Number(patch.km);
+    const next = {
+      ...data,
+      maintenance: data.maintenance.map((m) => (m.id === id ? { ...m, ...patch, km } : m)).sort((a, b) => b.km - a.km),
+      vehicle: { ...data.vehicle, currentKm: Math.max(data.vehicle.currentKm, km) },
+    };
+    persist(next);
+    setEditingMaint(null);
   };
 
   const addRule = (rule) => {
@@ -290,6 +302,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
               statuses={maintStatus}
               history={[...data.maintenance].sort((a, b) => b.km - a.km)}
               onAdd={() => setShowMaintForm(true)}
+              onEdit={(entry) => setEditingMaint(entry)}
               onDelete={(id) => deleteItem("maintenance", id)}
             />
           )}
@@ -331,6 +344,11 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       {showMaintForm && (
         <Modal title="Entretien effectué" onClose={() => setShowMaintForm(false)}>
           <MaintenanceForm onSubmit={addMaintenance} defaultKm={data.vehicle.currentKm} rules={data.rules} />
+        </Modal>
+      )}
+      {editingMaint && (
+        <Modal title="Modifier l'entretien" onClose={() => setEditingMaint(null)}>
+          <MaintenanceForm onSubmit={(patch) => updateMaintenance(editingMaint.id, patch)} rules={data.rules} initial={editingMaint} />
         </Modal>
       )}
       {ruleModal && (

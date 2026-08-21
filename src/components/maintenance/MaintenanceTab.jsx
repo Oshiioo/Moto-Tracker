@@ -11,7 +11,7 @@ import { fmtKm, fmtDate } from "../../lib/format";
 
 const HISTORY_PREVIEW_COUNT = 5;
 
-export default function MaintenanceTab({ vehicle, statuses, history, onAdd, onDelete }) {
+export default function MaintenanceTab({ vehicle, statuses, history, onAdd, onEdit, onDelete }) {
   const [showExport, setShowExport] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [typeFilter, setTypeFilter] = useState("");
@@ -89,7 +89,7 @@ export default function MaintenanceTab({ vehicle, statuses, history, onAdd, onDe
             ) : (
               <div className="space-y-2">
                 {visibleHistory.map((m) => (
-                  <Card key={m.id} onDelete={() => onDelete(m.id)} confirmLabel={`« ${m.type} » du ${fmtDate(m.date)}`}>
+                  <Card key={m.id} onEdit={() => onEdit(m)} onDelete={() => onDelete(m.id)} confirmLabel={`« ${m.type} » du ${fmtDate(m.date)}`}>
                     <div className="flex items-start gap-3">
                       <IconBadge icon={Wrench} color={PALETTE.steel} />
                       <div className="flex justify-between items-start flex-1">

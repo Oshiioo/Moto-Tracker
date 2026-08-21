@@ -3,10 +3,14 @@ import Field from "../ui/Field";
 import { inputStyle, submitStyle } from "../../theme/palette";
 import { EXTRA_KNOWN_TYPES } from "../../lib/typeNormalization";
 
-export default function MaintenanceForm({ onSubmit, defaultKm, rules }) {
+export default function MaintenanceForm({ onSubmit, defaultKm, rules, initial }) {
   const pickerTypes = rules.filter((r) => !r.hideFromPicker).map((r) => r.name);
   const visibleTypes = [...pickerTypes, ...EXTRA_KNOWN_TYPES.filter((t) => !pickerTypes.includes(t))];
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), km: defaultKm || "", type: pickerTypes[0] || "", note: "", cost: "" });
+  const [form, setForm] = useState(
+    initial
+      ? { date: initial.date, km: initial.km, type: initial.type, note: initial.note ?? "", cost: initial.cost ?? "" }
+      : { date: new Date().toISOString().slice(0, 10), km: defaultKm || "", type: pickerTypes[0] || "", note: "", cost: "" },
+  );
   return (
     <form
       onSubmit={(e) => {
@@ -41,7 +45,7 @@ export default function MaintenanceForm({ onSubmit, defaultKm, rules }) {
       <Field label="Coût (€) — optionnel">
         <input style={inputStyle} type="number" step="0.01" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} />
       </Field>
-      <button type="submit" style={submitStyle}>Enregistrer l'entretien</button>
+      <button type="submit" style={submitStyle}>{initial ? "Mettre à jour l'entretien" : "Enregistrer l'entretien"}</button>
     </form>
   );
 }
