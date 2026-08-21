@@ -8,7 +8,7 @@ import GlobalStyles from "./theme/GlobalStyles";
 import { PALETTE, FONT_BODY, FONT_MONO, vehicleColorMap } from "./theme/palette";
 import { CONTENT_MAX_WIDTH, TAB_IDS } from "./lib/constants";
 import { uid } from "./lib/format";
-import { DEFAULT_DATA, migrateData } from "./lib/maintenanceRules";
+import { migrateData } from "./lib/maintenanceRules";
 import { GEMINI_CONFIGURED } from "./lib/gemini";
 import { computeVehicleStats } from "./lib/vehicleStats";
 
@@ -72,15 +72,29 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       setReady(false);
       try {
         const snap = await getDoc(vehicleRef);
-        const loaded = snap.exists() ? snap.data() : DEFAULT_DATA;
+        if (!snap.exists()) {
+          // Ne devrait normalement jamais arriver : vehicleId vient d'une
+          // liste tout juste vérifiée par GarageGate. Si ça arrive quand même
+          // (coupure réseau, cache local pas encore synchronisé…), on ne
+          // recrée surtout pas une moto fantôme à partir des données de
+          // migration Honda CB500F — on rebascule sur une vraie moto existante.
+          console.error("Document introuvable pour la moto", vehicleId, "— redirection vers une autre moto");
+          const list = await onRefreshVehicles();
+          onSwitchVehicle(list.find((v) => v.id !== vehicleId)?.id || null);
+          return;
+        }
+        const loaded = snap.data();
         const migrated = migrateData(loaded);
         setData(migrated);
         if (migrated !== loaded) {
           await setDoc(vehicleRef, migrated, { merge: true });
         }
       } catch (e) {
+        // On ne remplace pas les données par le jeu de secours Honda CB500F :
+        // ça resterait affiché, et une prochaine sauvegarde l'écraserait pour
+        // de vrai. On réessaiera au prochain montage plutôt que de risquer
+        // de perdre des données.
         console.error("Erreur de chargement", e);
-        setData(DEFAULT_DATA);
       } finally {
         setReady(true);
       }
@@ -89,6 +103,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
     if (new URLSearchParams(window.location.search).get("quickadd") === "1") {
       setShowQuickAdd(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vehicleRef]);
 
   const persist = useCallback(
