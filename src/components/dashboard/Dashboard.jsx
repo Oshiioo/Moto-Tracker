@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, Cell } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar, Cell, PieChart, Pie } from "recharts";
 import { CheckCircle2, ChevronDown, LineChart as LineChartIcon } from "lucide-react";
 import StatCard from "./StatCard";
 import AlertRow from "./AlertRow";
@@ -218,6 +218,31 @@ function applyPeriod(v, period) {
   };
 }
 
+const CATEGORY_COLORS = [PALETTE.primary, PALETTE.ok, PALETTE.warning, PALETTE.danger, PALETTE.steel, PALETTE.primarySoft];
+
+// Répartition du coût de suivi par catégorie (carburant + un poste par type
+// d'entretien), pour la même moto/période que le reste de la carte. Les
+// types d'entretien au-delà des 4 premiers sont regroupés dans "Autres" pour
+// garder un graphe lisible même avec beaucoup de types différents.
+function costBreakdown(v, period) {
+  const fuelTotal = filterEntriesByPeriod(v.raw.fuel, period).reduce((s, f) => s + (Number(f.price) || 0), 0);
+  const byType = {};
+  filterEntriesByPeriod(v.raw.maintenance, period).forEach((m) => {
+    byType[m.type] = (byType[m.type] || 0) + (Number(m.cost) || 0);
+  });
+  const items = [
+    ...(fuelTotal > 0 ? [{ name: "Carburant", value: fuelTotal }] : []),
+    ...Object.entries(byType)
+      .filter(([, value]) => value > 0)
+      .map(([name, value]) => ({ name, value })),
+  ].sort((a, b) => b.value - a.value);
+
+  const top = items.slice(0, 4);
+  const rest = items.slice(4);
+  if (rest.length > 0) top.push({ name: "Autres", value: rest.reduce((s, i) => s + i.value, 0) });
+  return top.map((it, i) => ({ ...it, color: CATEGORY_COLORS[i % CATEGORY_COLORS.length] }));
+}
+
 // Fusionne les séries de conso de plusieurs motos par date (les km ne sont
 // pas comparables d'une moto à l'autre) pour un graphe multi-lignes.
 function buildConsumptionSeries(vehicles) {
@@ -374,6 +399,7 @@ function CoutDeSuiviCard({ allVehicles, defaultId }) {
   if (scoped.length === 1) {
     const v = scoped[0];
     const { ownership } = v;
+    const breakdown = costBreakdown(v, period);
     return (
       <div key={`${valid}-${period}`} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
         <div className="flex items-start justify-between mb-3">
@@ -403,9 +429,42 @@ function CoutDeSuiviCard({ allVehicles, defaultId }) {
             <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }}>Par mois</div>
           </div>
         </div>
-        <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mt-2">
+        <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mt-2 mb-3">
           Basé sur les pleins et entretiens enregistrés dans l'app, pas sur toute la durée de possession.
         </div>
+        {breakdown.length > 0 && (
+          <div className="flex items-center gap-4 pt-3" style={{ borderTop: `1px solid ${PALETTE.hairline}` }}>
+            <div style={{ width: 76, height: 76, flexShrink: 0 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={breakdown} dataKey="value" nameKey="name" innerRadius={22} outerRadius={38} paddingAngle={2} animationDuration={500}>
+                    {breakdown.map((c) => (
+                      <Cell key={c.name} fill={c.color} stroke="none" />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ background: PALETTE.surfaceRaised, border: `1px solid ${PALETTE.hairline}`, borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: PALETTE.text }}
+                    formatter={(val, name) => [fmtEuro(val, 0), name]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 space-y-1">
+              {breakdown.map((c) => (
+                <div key={c.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Dot color={c.color} />
+                    <span style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.text }}>{c.name}</span>
+                  </div>
+                  <span style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted }}>
+                    {fmtEuro(c.value, 0)} · {Math.round((c.value / ownership.totalCost) * 100)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
