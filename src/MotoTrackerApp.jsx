@@ -237,6 +237,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
           color: colorMap[v.id] || PALETTE.steelDim,
           fuelCount: fullData.fuel.length,
           maintCount: fullData.maintenance.length,
+          raw: fullData, // permet au Dashboard de recalculer les stats par période, par carte
           ...stats,
         };
       })

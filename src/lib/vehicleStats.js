@@ -1,5 +1,24 @@
 import { monthsBetween } from "./format";
 
+// Filtre par "lentille" temporelle appliquée dashboard : chaque carte a son
+// propre sélecteur de période, indépendant des autres cartes et de la moto
+// sélectionnée. "À surveiller" n'utilise jamais ceci — le statut d'entretien
+// doit toujours refléter la dernière intervention réelle, même ancienne.
+function periodCutoff(period) {
+  if (!period || period === "all") return null;
+  const cutoff = new Date();
+  if (period === "week") cutoff.setDate(cutoff.getDate() - 7);
+  else if (period === "month") cutoff.setMonth(cutoff.getMonth() - 1);
+  else if (period === "year") cutoff.setFullYear(cutoff.getFullYear() - 1);
+  return cutoff;
+}
+
+export function filterEntriesByPeriod(entries, period) {
+  const cutoff = periodCutoff(period);
+  if (!cutoff) return entries;
+  return entries.filter((e) => e.date && new Date(e.date) >= cutoff);
+}
+
 function computeConsumption(data) {
   const sorted = [...data.fuel].sort((a, b) => a.km - b.km);
   const out = [];
@@ -17,9 +36,12 @@ function computeConsumption(data) {
   return out;
 }
 
-function computeAvgConsumption(consumption) {
+function computeAvgConsumption(consumption, useAll = false) {
   if (consumption.length === 0) return null;
-  const recent = consumption.slice(-5);
+  // Sur "tout" : moyenne glissante des 5 derniers pleins. Sur une période
+  // bornée (semaine/mois/année) : moyenne de tous les pleins de la période,
+  // déjà naturellement peu nombreux.
+  const recent = useAll ? consumption : consumption.slice(-5);
   return recent.reduce((s, c) => s + c.value, 0) / recent.length;
 }
 
@@ -89,13 +111,24 @@ function computeMaintStatus(data) {
   });
 }
 
-export function computeVehicleStats(data) {
+export function computeVehicleStats(data, period = "all") {
   if (!data) return { consumption: [], avgConsumption: null, ownership: null, maintStatus: [] };
-  const consumption = computeConsumption(data);
+  // La consommation par plein a toujours besoin de l'historique complet pour
+  // calculer une distance correcte entre 2 pleins consécutifs — on filtre le
+  // résultat par période, jamais les données brutes en amont du calcul.
+  const consumptionAll = computeConsumption(data);
+  const cutoff = periodCutoff(period);
+  const consumption = cutoff ? consumptionAll.filter((c) => new Date(c.date) >= cutoff) : consumptionAll;
+  const scopedData = cutoff
+    ? { ...data, fuel: filterEntriesByPeriod(data.fuel, period), maintenance: filterEntriesByPeriod(data.maintenance, period) }
+    : data;
   return {
     consumption,
-    avgConsumption: computeAvgConsumption(consumption),
-    ownership: computeOwnership(data),
+    avgConsumption: computeAvgConsumption(consumption, !!cutoff),
+    ownership: computeOwnership(scopedData),
+    // Toujours calculé sur l'historique complet, quelle que soit la période
+    // choisie sur le dashboard : "à surveiller" reflète l'état réel de la
+    // moto, pas une fenêtre temporelle.
     maintStatus: computeMaintStatus(data),
   };
 }

@@ -7,6 +7,7 @@ import MiniRing from "./MiniRing";
 import { PALETTE, FONT_BODY, FONT_MONO, statusColor, cardStyle, sectionLabelStyle, vehicleColorMap } from "../../theme/palette";
 import { fmtKm, fmtEuro, fmtDate } from "../../lib/format";
 import { ruleProgress } from "../../lib/maintenanceRules";
+import { computeVehicleStats, filterEntriesByPeriod } from "../../lib/vehicleStats";
 
 const Dot = ({ color }) => <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />;
 
@@ -120,6 +121,91 @@ function VehicleSwitcher({ vehicles, value, onChange }) {
   );
 }
 
+const PERIOD_OPTIONS = [
+  { id: "week", label: "Semaine" },
+  { id: "month", label: "Mois" },
+  { id: "year", label: "Année" },
+  { id: "all", label: "Tout" },
+];
+
+// Sélecteur de période, indépendant par carte (comme VehicleSwitcher est
+// indépendant par carte) — chaque carte a son propre état, changer l'une ne
+// touche pas les autres. N'affecte jamais "À surveiller" (toujours l'état
+// réel courant, cf. computeVehicleStats).
+function PeriodSwitcher({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const current = PERIOD_OPTIONS.find((p) => p.id === value);
+
+  return (
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-1" style={{ background: "transparent", border: "none", padding: 0 }}>
+        <span style={{ fontFamily: FONT_BODY, fontSize: 11, fontWeight: 600, color: PALETTE.textMuted, whiteSpace: "nowrap" }}>
+          {current?.label}
+        </span>
+        <ChevronDown size={12} color={PALETTE.textMuted} />
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} className="fixed inset-0" style={{ zIndex: 20 }} />
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 4px)",
+              right: 0,
+              zIndex: 21,
+              background: PALETTE.surfaceRaised,
+              border: `1px solid ${PALETTE.hairline}`,
+              borderRadius: 8,
+              padding: 4,
+              minWidth: 110,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+            }}
+          >
+            {PERIOD_OPTIONS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  onChange(p.id);
+                  setOpen(false);
+                }}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "8px 10px",
+                  borderRadius: 6,
+                  fontFamily: FONT_BODY,
+                  fontSize: 13,
+                  fontWeight: value === p.id ? 700 : 500,
+                  color: value === p.id ? PALETTE.text : PALETTE.textMuted,
+                  background: value === p.id ? PALETTE.surface : "transparent",
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Recalcule les stats d'une moto (issues de dashboardVehicles) pour une
+// période donnée, à partir de ses données brutes (v.raw). "all" ne recalcule
+// rien : on réutilise directement les stats déjà calculées côté MotoTrackerApp.
+function applyPeriod(v, period) {
+  if (period === "all") return v;
+  const stats = computeVehicleStats(v.raw, period);
+  return {
+    ...v,
+    ...stats,
+    fuelCount: filterEntriesByPeriod(v.raw.fuel, period).length,
+    maintCount: filterEntriesByPeriod(v.raw.maintenance, period).length,
+  };
+}
+
 // Fusionne les séries de conso de plusieurs motos par date (les km ne sont
 // pas comparables d'une moto à l'autre) pour un graphe multi-lignes.
 function buildConsumptionSeries(vehicles) {
@@ -142,20 +228,36 @@ const EMPTY_CHART_PLACEHOLDER = [{ km: 0 }, { km: 1 }];
 
 function ConsoStatCard({ allVehicles, defaultId }) {
   const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  const [period, setPeriod] = useState("all");
   if (resolved.length === 0) return null;
+  const scoped = resolved.map((v) => applyPeriod(v, period));
   const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
+  const periodSwitcher = <PeriodSwitcher value={period} onChange={setPeriod} />;
 
   const content =
-    resolved.length === 1 ? (
-      <StatCard label="Conso. moyenne" value={resolved[0].avgConsumption ? resolved[0].avgConsumption.toFixed(1) : "—"} unit="L/100km" tag={switcher} />
+    scoped.length === 1 ? (
+      <StatCard
+        label="Conso. moyenne"
+        value={scoped[0].avgConsumption ? scoped[0].avgConsumption.toFixed(1) : "—"}
+        unit="L/100km"
+        tag={
+          <div className="flex flex-col items-end gap-1">
+            {periodSwitcher}
+            {switcher}
+          </div>
+        }
+      />
     ) : (
       <div style={cardStyle()}>
         <div className="flex items-start justify-between mb-3">
           <div style={sectionLabelStyle}>CONSO. MOYENNE</div>
-          {switcher}
+          <div className="flex items-center gap-3">
+            {periodSwitcher}
+            {switcher}
+          </div>
         </div>
         <div className="space-y-2">
-          {resolved.map((v) => (
+          {scoped.map((v) => (
             <div key={v.id} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Dot color={v.color} />
@@ -171,7 +273,7 @@ function ConsoStatCard({ allVehicles, defaultId }) {
     );
 
   return (
-    <div key={valid} style={{ animation: "tabContentIn 200ms ease" }}>
+    <div key={`${valid}-${period}`} style={{ animation: "tabContentIn 200ms ease" }}>
       {content}
     </div>
   );
@@ -179,20 +281,36 @@ function ConsoStatCard({ allVehicles, defaultId }) {
 
 function PleinsStatCard({ allVehicles, defaultId }) {
   const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  const [period, setPeriod] = useState("all");
   if (resolved.length === 0) return null;
+  const scoped = resolved.map((v) => applyPeriod(v, period));
   const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
+  const periodSwitcher = <PeriodSwitcher value={period} onChange={setPeriod} />;
 
   const content =
-    resolved.length === 1 ? (
-      <StatCard label="Pleins enregistrés" value={resolved[0].fuelCount} unit={resolved[0].fuelCount > 1 ? "entrées" : "entrée"} tag={switcher} />
+    scoped.length === 1 ? (
+      <StatCard
+        label="Pleins enregistrés"
+        value={scoped[0].fuelCount}
+        unit={scoped[0].fuelCount > 1 ? "entrées" : "entrée"}
+        tag={
+          <div className="flex flex-col items-end gap-1">
+            {periodSwitcher}
+            {switcher}
+          </div>
+        }
+      />
     ) : (
       <div style={cardStyle()}>
         <div className="flex items-start justify-between mb-3">
           <div style={sectionLabelStyle}>PLEINS ENREGISTRÉS</div>
-          {switcher}
+          <div className="flex items-center gap-3">
+            {periodSwitcher}
+            {switcher}
+          </div>
         </div>
         <div className="space-y-2">
-          {resolved.map((v) => (
+          {scoped.map((v) => (
             <div key={v.id} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Dot color={v.color} />
@@ -208,7 +326,7 @@ function PleinsStatCard({ allVehicles, defaultId }) {
     );
 
   return (
-    <div key={valid} style={{ animation: "tabContentIn 200ms ease" }}>
+    <div key={`${valid}-${period}`} style={{ animation: "tabContentIn 200ms ease" }}>
       {content}
     </div>
   );
@@ -216,33 +334,44 @@ function PleinsStatCard({ allVehicles, defaultId }) {
 
 function CoutDeSuiviCard({ allVehicles, defaultId }) {
   const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  const [period, setPeriod] = useState("all");
   if (resolved.length === 0) return null;
-  const withData = resolved.filter((v) => v.fuelCount > 0 || v.maintCount > 0);
+  const scoped = resolved.map((v) => applyPeriod(v, period));
+  const withData = scoped.filter((v) => v.fuelCount > 0 || v.maintCount > 0);
   const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
+  const periodSwitcher = <PeriodSwitcher value={period} onChange={setPeriod} />;
 
   if (withData.length === 0) {
     return (
-      <div key={valid} style={{ ...cardStyle(PALETTE.hairline, true), animation: "tabContentIn 200ms ease" }}>
+      <div key={`${valid}-${period}`} style={{ ...cardStyle(PALETTE.hairline, true), animation: "tabContentIn 200ms ease" }}>
         <div className="flex items-start justify-between">
           <div style={{ fontFamily: FONT_BODY, fontSize: 14, color: PALETTE.textMuted }}>
-            Pas encore de plein ni d'entretien enregistré pour calculer un coût.
+            {period === "all"
+              ? "Pas encore de plein ni d'entretien enregistré pour calculer un coût."
+              : "Aucun plein ni entretien enregistré sur cette période."}
           </div>
-          {switcher}
+          <div className="flex items-center gap-3">
+            {periodSwitcher}
+            {switcher}
+          </div>
         </div>
       </div>
     );
   }
 
-  if (resolved.length === 1) {
-    const v = resolved[0];
+  if (scoped.length === 1) {
+    const v = scoped[0];
     const { ownership } = v;
     return (
-      <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+      <div key={`${valid}-${period}`} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
         <div className="flex items-start justify-between mb-3">
           <div style={sectionLabelStyle}>
             COÛT DE SUIVI{ownership.trackedSince ? ` · DEPUIS LE ${fmtDate(ownership.trackedSince).toUpperCase()}` : ""}
           </div>
-          {switcher}
+          <div className="flex items-center gap-3">
+            {periodSwitcher}
+            {switcher}
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <div>
@@ -269,19 +398,22 @@ function CoutDeSuiviCard({ allVehicles, defaultId }) {
     );
   }
 
-  const totalCost = resolved.reduce((s, v) => s + (v.ownership?.totalCost || 0), 0);
+  const totalCost = scoped.reduce((s, v) => s + (v.ownership?.totalCost || 0), 0);
   return (
-    <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+    <div key={`${valid}-${period}`} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
       <div className="flex items-start justify-between mb-3">
         <div style={sectionLabelStyle}>COÛT DE SUIVI</div>
-        {switcher}
+        <div className="flex items-center gap-3">
+          {periodSwitcher}
+          {switcher}
+        </div>
       </div>
       <div style={{ fontFamily: FONT_MONO, fontSize: 22, fontWeight: 700, color: PALETTE.text }}>{fmtEuro(totalCost, 0)}</div>
       <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.textMuted }} className="mb-3">
         Total cumulé, toutes motos
       </div>
       <div className="space-y-2 pt-2" style={{ borderTop: `1px solid ${PALETTE.hairline}` }}>
-        {resolved.map((v) => (
+        {scoped.map((v) => (
           <div key={v.id} className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Dot color={v.color} />
@@ -301,16 +433,22 @@ function CoutDeSuiviCard({ allVehicles, defaultId }) {
 
 function ConsommationCard({ allVehicles, defaultId }) {
   const [resolved, valid, setValid] = useVehicleView(allVehicles, defaultId);
+  const [period, setPeriod] = useState("all");
   if (resolved.length === 0) return null;
-  const withConsumption = resolved.filter((v) => v.consumption.length >= 2);
+  const scoped = resolved.map((v) => applyPeriod(v, period));
+  const withConsumption = scoped.filter((v) => v.consumption.length >= 2);
   const switcher = <VehicleSwitcher vehicles={allVehicles} value={valid} onChange={setValid} />;
+  const periodSwitcher = <PeriodSwitcher value={period} onChange={setPeriod} />;
 
   if (withConsumption.length === 0) {
     return (
-      <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+      <div key={`${valid}-${period}`} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
         <div className="flex items-start justify-between mb-3">
           <div style={sectionLabelStyle}>CONSOMMATION</div>
-          {switcher}
+          <div className="flex items-center gap-3">
+            {periodSwitcher}
+            {switcher}
+          </div>
         </div>
         <div style={{ height: 140, position: "relative" }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -322,7 +460,9 @@ function ConsommationCard({ allVehicles, defaultId }) {
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-2">
             <LineChartIcon size={26} color={PALETTE.steelDim} strokeWidth={1.5} />
             <div style={{ fontFamily: FONT_BODY, fontSize: 13, color: PALETTE.textMuted, maxWidth: 220 }}>
-              Pas encore assez de pleins enregistrés pour calculer une consommation.
+              {period === "all"
+                ? "Pas encore assez de pleins enregistrés pour calculer une consommation."
+                : "Pas assez de pleins sur cette période pour calculer une consommation."}
             </div>
           </div>
         </div>
@@ -330,16 +470,19 @@ function ConsommationCard({ allVehicles, defaultId }) {
     );
   }
 
-  if (resolved.length === 1) {
-    const v = resolved[0];
+  if (scoped.length === 1) {
+    const v = scoped[0];
     const { consumption } = v;
     const bestTank = consumption.reduce((a, b) => (b.value < a.value ? b : a));
     const worstTank = consumption.reduce((a, b) => (b.value > a.value ? b : a));
     return (
-      <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+      <div key={`${valid}-${period}`} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
         <div className="flex items-start justify-between mb-3">
           <div style={sectionLabelStyle}>CONSOMMATION</div>
-          {switcher}
+          <div className="flex items-center gap-3">
+            {periodSwitcher}
+            {switcher}
+          </div>
         </div>
         <div style={{ height: 140 }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -373,10 +516,13 @@ function ConsommationCard({ allVehicles, defaultId }) {
 
   const series = buildConsumptionSeries(withConsumption);
   return (
-    <div key={valid} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
+    <div key={`${valid}-${period}`} style={{ ...cardStyle(), animation: "tabContentIn 200ms ease" }}>
       <div className="flex items-start justify-between mb-3">
         <div style={sectionLabelStyle}>CONSOMMATION</div>
-        {switcher}
+        <div className="flex items-center gap-3">
+          {periodSwitcher}
+          {switcher}
+        </div>
       </div>
       <div style={{ height: 140 }}>
         <ResponsiveContainer width="100%" height="100%">
