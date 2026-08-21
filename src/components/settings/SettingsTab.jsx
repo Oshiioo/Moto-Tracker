@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { CheckCircle2, LogOut } from "lucide-react";
+import { CheckCircle2, LogOut, Download } from "lucide-react";
 import SectionHeader from "../ui/SectionHeader";
 import Card from "../ui/Card";
 import GarageRow from "../garage/GarageRow";
@@ -19,6 +19,8 @@ export default function SettingsTab({
   onAddRule,
   onEditRule,
   onDeleteRule,
+  onExportBackup,
+  backupReady,
   apiKeyConfigured,
   userEmail,
   onSignOut,
@@ -95,6 +97,40 @@ export default function SettingsTab({
               <code>.env.local</code>, puis redémarre <code>npm run dev</code>.
             </div>
           )}
+        </div>
+      </div>
+
+      <div>
+        <div style={{ fontFamily: FONT_DISPLAY, fontSize: 16, fontWeight: 600, color: PALETTE.text }} className="mb-3">
+          Sauvegarde
+        </div>
+        <div style={cardStyle()}>
+          <div style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }} className="mb-3">
+            Télécharge toutes les données du garage (motos actives, vendues et archivées, avec leurs pleins, entretiens et intervalles) dans un fichier JSON, pour garder une copie de secours.
+          </div>
+          <button
+            type="button"
+            onClick={onExportBackup}
+            disabled={!backupReady}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              width: "100%",
+              background: PALETTE.surfaceRaised,
+              border: `1px solid ${PALETTE.hairline}`,
+              color: PALETTE.text,
+              fontFamily: FONT_BODY,
+              fontWeight: 600,
+              fontSize: 14,
+              borderRadius: 8,
+              padding: "12px",
+              opacity: backupReady ? 1 : 0.5,
+            }}
+          >
+            <Download size={16} /> Télécharger une sauvegarde complète
+          </button>
         </div>
       </div>
 

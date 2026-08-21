@@ -244,6 +244,31 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       .filter(Boolean);
   }, [vehicles, vehicleId, data, extraVehiclesData, activeStats]);
 
+  // Sauvegarde complète : toutes les motos du garage (actives, vendues,
+  // archivées) avec pleins/entretiens/règles, en un seul JSON téléchargeable.
+  // Réutilise les données déjà chargées en mémoire (data + extraVehiclesData),
+  // pas de lecture Firestore supplémentaire.
+  const backupReady = vehicles.every((v) => v.id === vehicleId || extraVehiclesData[v.id]);
+  const exportBackup = () => {
+    const backup = {
+      app: "Moto-Tracker",
+      exportedAt: new Date().toISOString(),
+      vehicles: vehicles
+        .map((v) => {
+          const fullData = v.id === vehicleId ? data : extraVehiclesData[v.id];
+          return fullData ? { id: v.id, ...fullData } : null;
+        })
+        .filter(Boolean),
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `moto-tracker-sauvegarde-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (!ready || !data) {
     return (
       <div style={{ background: PALETTE.bg, height: "100dvh" }} className="flex items-center justify-center">
@@ -321,6 +346,8 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
               onAddRule={() => setRuleModal("new")}
               onEditRule={(rule) => setRuleModal(rule)}
               onDeleteRule={(id) => deleteItem("rules", id)}
+              onExportBackup={exportBackup}
+              backupReady={backupReady}
               apiKeyConfigured={GEMINI_CONFIGURED}
               userEmail={user.email}
               onSignOut={onSignOut}
