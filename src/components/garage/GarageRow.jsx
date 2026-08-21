@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import ConfirmModal from "../ui/ConfirmModal";
+import VehicleAvatar from "./VehicleAvatar";
 import { PALETTE, FONT_BODY, FONT_MONO, cardStyle } from "../../theme/palette";
 import { fmtKm, fmtDuration } from "../../lib/format";
 
@@ -16,21 +17,23 @@ export default function GarageRow({ vehicle, active, onSwitch, onDelete, deletab
         position: "relative",
       }}
     >
-      <button onClick={onSwitch} style={{ textAlign: "left", flex: 1, background: "transparent", border: "none" }}>
-        <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: PALETTE.text, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
-          {color && <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />}
-          {vehicle.name}{" "}
-          {active && <span style={{ color: PALETTE.primary, fontSize: 11 }}>· active</span>}
-          {vehicle.status === "sold" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>· vendue</span>}
-          {vehicle.status === "archived" && (
-            <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>
-              · archivée{vehicle.archiveReason ? ` (${vehicle.archiveReason.toLowerCase()})` : ""}
-            </span>
-          )}
-        </div>
-        <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted, marginTop: 2 }}>
-          {vehicle.status === "sold" && vehicle.finalKm != null ? fmtKm(vehicle.finalKm) : fmtKm(vehicle.currentKm)} km
-          {vehicle.acquisitionDate && ` · possédée depuis ${fmtDuration(vehicle.acquisitionDate, vehicle.saleDate || vehicle.archiveDate || undefined)}`}
+      <button onClick={onSwitch} style={{ textAlign: "left", flex: 1, background: "transparent", border: "none", display: "flex", alignItems: "center", gap: 10 }}>
+        <VehicleAvatar photo={vehicle.photo} name={vehicle.name} color={color} size={36} />
+        <div>
+          <div style={{ fontFamily: FONT_BODY, fontWeight: 600, fontSize: 14, color: PALETTE.text, display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
+            {vehicle.name}{" "}
+            {active && <span style={{ color: PALETTE.primary, fontSize: 11 }}>· active</span>}
+            {vehicle.status === "sold" && <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>· vendue</span>}
+            {vehicle.status === "archived" && (
+              <span style={{ color: PALETTE.textMuted, fontSize: 11 }}>
+                · archivée{vehicle.archiveReason ? ` (${vehicle.archiveReason.toLowerCase()})` : ""}
+              </span>
+            )}
+          </div>
+          <div style={{ fontFamily: FONT_MONO, fontSize: 12, color: PALETTE.textMuted, marginTop: 2 }}>
+            {vehicle.status === "sold" && vehicle.finalKm != null ? fmtKm(vehicle.finalKm) : fmtKm(vehicle.currentKm)} km
+            {vehicle.acquisitionDate && ` · possédée depuis ${fmtDuration(vehicle.acquisitionDate, vehicle.saleDate || vehicle.archiveDate || undefined)}`}
+          </div>
         </div>
       </button>
       {deletable && (

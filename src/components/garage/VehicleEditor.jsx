@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
+import { Camera, X } from "lucide-react";
 import Field from "../ui/Field";
+import VehicleAvatar from "./VehicleAvatar";
 import { PALETTE, FONT_BODY, inputStyle, submitStyle, cardStyle } from "../../theme/palette";
 import { fmtKm, fmtDuration } from "../../lib/format";
+import { resizeImageToSquare } from "../../lib/image";
 
 export default function VehicleEditor({ vehicle, onUpdate }) {
   const [name, setName] = useState(vehicle.name);
+  const [photo, setPhoto] = useState(vehicle.photo || null);
+  const [photoError, setPhotoError] = useState("");
   const [brand, setBrand] = useState(vehicle.brand || "");
   const [model, setModel] = useState(vehicle.model || "");
   const [year, setYear] = useState(vehicle.year || "");
@@ -21,6 +26,7 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
 
   useEffect(() => {
     setName(vehicle.name);
+    setPhoto(vehicle.photo || null);
     setBrand(vehicle.brand || "");
     setModel(vehicle.model || "");
     setYear(vehicle.year || "");
@@ -33,10 +39,11 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
     setFinalKm(String(vehicle.finalKm ?? vehicle.currentKm));
     setArchiveReason(vehicle.archiveReason || "Accidentée");
     setArchiveDate(vehicle.archiveDate || new Date().toISOString().slice(0, 10));
-  }, [vehicle.name, vehicle.brand, vehicle.model, vehicle.year, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.acquisitionDate, vehicle.nextInspectionDate, vehicle.saleDate, vehicle.finalKm, vehicle.archiveReason, vehicle.archiveDate]);
+  }, [vehicle.name, vehicle.photo, vehicle.brand, vehicle.model, vehicle.year, vehicle.currentKm, vehicle.status, vehicle.acquisitionKm, vehicle.acquisitionDate, vehicle.nextInspectionDate, vehicle.saleDate, vehicle.finalKm, vehicle.archiveReason, vehicle.archiveDate]);
 
   const dirty =
     name !== vehicle.name ||
+    photo !== (vehicle.photo || null) ||
     brand !== (vehicle.brand || "") ||
     model !== (vehicle.model || "") ||
     year !== (vehicle.year || "") ||
@@ -55,6 +62,55 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
   return (
     <div style={{ ...cardStyle(), height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
       <div>
+        <div className="flex items-center gap-3 mb-4">
+          <VehicleAvatar photo={photo} name={name} size={56} />
+          <div>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
+                fontFamily: FONT_BODY,
+                fontSize: 12,
+                fontWeight: 600,
+                color: PALETTE.primarySoft,
+              }}
+            >
+              <Camera size={14} />
+              {photo ? "Changer la photo" : "Ajouter une photo"}
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  if (!file) return;
+                  setPhotoError("");
+                  try {
+                    setPhoto(await resizeImageToSquare(file));
+                  } catch {
+                    setPhotoError("Impossible de lire cette image, réessaie avec une autre.");
+                  }
+                }}
+              />
+            </label>
+            {photo && (
+              <button
+                type="button"
+                onClick={() => setPhoto(null)}
+                className="flex items-center gap-1"
+                style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted, marginTop: 4 }}
+              >
+                <X size={12} /> Retirer
+              </button>
+            )}
+            {photoError && (
+              <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.danger, marginTop: 4 }}>{photoError}</div>
+            )}
+          </div>
+        </div>
         <Field label="Nom de la moto">
           <input style={inputStyle} type="text" value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
@@ -123,6 +179,7 @@ export default function VehicleEditor({ vehicle, onUpdate }) {
         onClick={() => {
           onUpdate({
             name,
+            photo,
             brand: brand || null,
             model: model || null,
             year: year || null,

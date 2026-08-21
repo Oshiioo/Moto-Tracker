@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Camera } from "lucide-react";
 import Field from "../ui/Field";
+import VehicleAvatar from "./VehicleAvatar";
 import { PALETTE, FONT_BODY, inputStyle, submitStyle, aiButtonStyle } from "../../theme/palette";
 import { uid } from "../../lib/format";
 import { geminiSearchExtract, GEMINI_CONFIGURED } from "../../lib/gemini";
 import { normalizeType } from "../../lib/typeNormalization";
+import { resizeImageToSquare } from "../../lib/image";
 
 // Valeurs de départ génériques (pas spécifiques à une marque) — proposées à
 // chaque ajout de moto pour que la liste ne soit jamais vide, y compris quand
@@ -54,6 +56,8 @@ const mergeSuggestions = (current, items) => {
 
 export default function AddVehicleForm({ onSubmit }) {
   const [name, setName] = useState("");
+  const [photo, setPhoto] = useState(null);
+  const [photoError, setPhotoError] = useState("");
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
@@ -108,6 +112,7 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
           }));
         onSubmit({
           name: name.trim(),
+          photo,
           currentKm,
           rules,
           acquisitionDate,
@@ -118,6 +123,45 @@ Utilise de préférence ces noms s'ils correspondent : Vidange, Filtre à air, B
         });
       }}
     >
+      <div className="flex items-center gap-3 mb-3">
+        <VehicleAvatar photo={photo} name={name} size={56} />
+        <div>
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              cursor: "pointer",
+              fontFamily: FONT_BODY,
+              fontSize: 12,
+              fontWeight: 600,
+              color: PALETTE.primarySoft,
+            }}
+          >
+            <Camera size={14} />
+            {photo ? "Changer la photo" : "Ajouter une photo — optionnel"}
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                setPhotoError("");
+                try {
+                  setPhoto(await resizeImageToSquare(file));
+                } catch {
+                  setPhotoError("Impossible de lire cette image, réessaie avec une autre.");
+                }
+              }}
+            />
+          </label>
+          {photoError && (
+            <div style={{ fontFamily: FONT_BODY, fontSize: 11, color: PALETTE.danger, marginTop: 4 }}>{photoError}</div>
+          )}
+        </div>
+      </div>
       <Field label="Nom de la moto">
         <input
           style={inputStyle}
