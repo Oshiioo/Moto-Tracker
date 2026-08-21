@@ -19,9 +19,18 @@ export default function FuelTab({ entries, consumption, onAdd, onDelete }) {
       if (!byYear.has(year)) byYear.set(year, []);
       byYear.get(year).push(e);
     });
-    return [...byYear.entries()].sort((a, b) => b[0] - a[0]);
+    return [...byYear.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([year, list]) => {
+        const totalLiters = list.reduce((s, e) => s + (Number(e.liters) || 0), 0);
+        const kms = list.map((e) => e.km);
+        // Distance entre le 1er et le dernier plein de l'année — approximation
+        // la plus honnête possible à partir des seuls relevés de pleins.
+        const kmDriven = kms.length >= 2 ? Math.max(...kms) - Math.min(...kms) : null;
+        return { year, list, totalLiters, kmDriven };
+      });
   }, [entries]);
-  const mostRecentYear = groups[0]?.[0];
+  const mostRecentYear = groups[0]?.year;
 
   const [toggledYears, setToggledYears] = useState(() => new Set());
   const toggleYear = (year) => {
@@ -40,7 +49,7 @@ export default function FuelTab({ entries, consumption, onAdd, onDelete }) {
         <EmptyState text="Aucun plein enregistré. Ajoute ton premier plein pour suivre la consommation." />
       ) : (
         <div className="space-y-1">
-          {groups.map(([year, yearEntries]) => {
+          {groups.map(({ year, list, totalLiters, kmDriven }) => {
             const isOpen = toggledYears.has(year) ? year !== mostRecentYear : year === mostRecentYear;
             return (
               <div key={year}>
@@ -53,7 +62,9 @@ export default function FuelTab({ entries, consumption, onAdd, onDelete }) {
                   <span style={{ fontFamily: FONT_DISPLAY, fontSize: 15, fontWeight: 600, color: PALETTE.text }}>{year}</span>
                   <span className="flex items-center gap-2">
                     <span style={{ fontFamily: FONT_BODY, fontSize: 12, color: PALETTE.textMuted }}>
-                      {yearEntries.length} plein{yearEntries.length > 1 ? "s" : ""}
+                      {list.length} plein{list.length > 1 ? "s" : ""}
+                      {totalLiters > 0 ? ` · ${totalLiters.toFixed(1)} L` : ""}
+                      {kmDriven != null ? ` · ${fmtKm(kmDriven)} km` : ""}
                     </span>
                     <ChevronDown
                       size={14}
@@ -64,7 +75,7 @@ export default function FuelTab({ entries, consumption, onAdd, onDelete }) {
                 </button>
                 {isOpen && (
                   <div className="space-y-2 mt-2 mb-3">
-                    {yearEntries.map((e) => (
+                    {list.map((e) => (
                       <Card key={e.id} onDelete={() => onDelete(e.id)} confirmLabel={`ce plein du ${fmtDate(e.date)}`}>
                         <div className="flex items-start gap-3">
                           <IconBadge icon={Fuel} color={PALETTE.primary} />
