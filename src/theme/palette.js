@@ -17,9 +17,9 @@ export const PALETTE = {
   hairline: "#E4E0F5",
 };
 
-export const FONT_DISPLAY = "'Oswald', sans-serif";
+export const FONT_DISPLAY = "'Sora', sans-serif";
 export const FONT_BODY = "'Work Sans', sans-serif";
-export const FONT_MONO = "'JetBrains Mono', monospace";
+export const FONT_MONO = "'Sora', sans-serif";
 
 export const statusColor = (status) =>
   status === "overdue" ? PALETTE.danger : status === "soon" ? PALETTE.warning : PALETTE.ok;

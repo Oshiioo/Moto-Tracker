@@ -3,7 +3,7 @@ import { PALETTE } from "./palette";
 export default function GlobalStyles() {
   return (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Work+Sans:wght@400;500;600&display=swap');
       html, body, #root { height: 100% !important; margin: 0 !important; }
       body { display: block !important; place-items: unset !important; min-width: 0 !important; line-height: 1.4; }
       textarea { line-height: 1.4; }
