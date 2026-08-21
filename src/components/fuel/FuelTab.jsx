@@ -7,7 +7,7 @@ import IconBadge from "../ui/IconBadge";
 import { PALETTE, FONT_BODY, FONT_MONO, FONT_DISPLAY } from "../../theme/palette";
 import { fmtKm, fmtDate } from "../../lib/format";
 
-export default function FuelTab({ entries, consumption, onAdd, onDelete }) {
+export default function FuelTab({ entries, consumption, onAdd, onEdit, onDelete }) {
   const consByEntry = Object.fromEntries(consumption.map((c) => [c.id, c.value]));
 
   // Regroupe par année (repliable) pour rester lisible même avec des années
@@ -76,7 +76,7 @@ export default function FuelTab({ entries, consumption, onAdd, onDelete }) {
                 {isOpen && (
                   <div className="space-y-2 mt-2 mb-3">
                     {list.map((e) => (
-                      <Card key={e.id} onDelete={() => onDelete(e.id)} confirmLabel={`ce plein du ${fmtDate(e.date)}`}>
+                      <Card key={e.id} onEdit={() => onEdit(e)} onDelete={() => onDelete(e.id)} confirmLabel={`ce plein du ${fmtDate(e.date)}`}>
                         <div className="flex items-start gap-3">
                           <IconBadge icon={Fuel} color={PALETTE.primary} />
                           <div className="flex justify-between items-start flex-1">

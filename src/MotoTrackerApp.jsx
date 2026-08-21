@@ -60,6 +60,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
   };
   const [ready, setReady] = useState(false);
   const [showFuelForm, setShowFuelForm] = useState(false);
+  const [editingFuel, setEditingFuel] = useState(null);
   const [showMaintForm, setShowMaintForm] = useState(false);
   const [ruleModal, setRuleModal] = useState(null); // null | "new" | règle en édition
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
@@ -127,6 +128,17 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
     };
     persist(next);
     setShowFuelForm(false);
+  };
+
+  const updateFuel = (id, patch) => {
+    const km = Number(patch.km);
+    const next = {
+      ...data,
+      fuel: data.fuel.map((f) => (f.id === id ? { ...f, ...patch, km } : f)).sort((a, b) => a.km - b.km),
+      vehicle: { ...data.vehicle, currentKm: Math.max(data.vehicle.currentKm, km) },
+    };
+    persist(next);
+    setEditingFuel(null);
   };
 
   const addMaintenance = (entry) => {
@@ -267,6 +279,7 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
               entries={[...data.fuel].sort((a, b) => b.km - a.km)}
               consumption={consumption}
               onAdd={() => setShowFuelForm(true)}
+              onEdit={(entry) => setEditingFuel(entry)}
               onDelete={(id) => deleteItem("fuel", id)}
             />
           )}
@@ -308,6 +321,11 @@ export default function MotoTrackerApp({ user, vehicleId, vehicles, onRefreshVeh
       {showFuelForm && (
         <Modal title="Nouveau plein" onClose={() => setShowFuelForm(false)}>
           <FuelForm onSubmit={addFuel} defaultKm={data.vehicle.currentKm} />
+        </Modal>
+      )}
+      {editingFuel && (
+        <Modal title="Modifier le plein" onClose={() => setEditingFuel(null)}>
+          <FuelForm onSubmit={(patch) => updateFuel(editingFuel.id, patch)} initial={editingFuel} />
         </Modal>
       )}
       {showMaintForm && (
